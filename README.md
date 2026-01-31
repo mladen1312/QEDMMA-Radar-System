@@ -8,6 +8,9 @@
 > **Anti-Stealth Detection & Precision Weapon Guidance System**  
 > Using Rydberg quantum sensors, VHF bistatic geometry, and TDOA geolocation
 
+**Author:** Dr. Mladen Mešter  
+**Copyright:** © 2026 Dr. Mladen Mešter - All Rights Reserved
+
 ---
 
 ## 🔬 System Overview
@@ -25,6 +28,27 @@ QEDMMA is a revolutionary distributed radar system designed to detect and track 
 
 ---
 
+## 🆕 Version 2.0 Enhancements
+
+### Tri-Modal Communication System
+
+| Mode | Capacity | Range | Failover Time |
+|------|----------|-------|---------------|
+| **FSO** (1550 nm) | 10 Gbps | 50 km | - |
+| **E-band** (71-86 GHz) | 10 Gbps | 15 km | <100 ms |
+| **HF NVIS** (3-10 MHz) | 9.6 kbps | 500 km | <30 s |
+
+### Extended Range
+- **v1.3:** 150 km detection range
+- **v2.0:** 380 km detection range (+27.8 dB link budget)
+
+### N+2 Redundancy
+- 6 nodes (4 required for operation)
+- Hot standby C2 server
+- Mesh network topology
+
+---
+
 ## 📦 Repository Structure
 
 ```
@@ -35,29 +59,40 @@ QEDMMA-Radar-System/
 │   ├── cross_correlator.sv           # FFT-based TDOA extraction
 │   ├── cs_encoder.sv                 # Compressed Sensing encoder
 │   ├── qedmma_rx_top.sv              # Top-level Rx integration
-│   └── timestamp_capture_regs_pkg.sv # Register definitions
+│   ├── imm_tracker.sv                # IMM target tracker
+│   ├── tdoa_solver.sv                # TDOA geolocation solver
+│   │
+│   │   # v2.0 Communication Modules
+│   ├── failover_fsm.sv               # ⭐ NEW: Auto-failover FSM
+│   ├── link_monitor.sv               # ⭐ NEW: Per-link health monitor
+│   └── comm_controller_top.sv        # ⭐ NEW: Communication controller
 │
 ├── tb/                               # Verification
 │   ├── test_timestamp_capture.py     # Cocotb testbench
 │   ├── test_ddc_core.py              # DDC verification
+│   ├── test_failover_fsm.py          # ⭐ NEW: Failover FSM tests
 │   └── Makefile                      # Simulation makefile
 │
 ├── drivers/                          # Software Drivers
 │   ├── timestamp_capture_driver.c    # Linux kernel driver
-│   ├── timestamp_capture_regs.h      # C header (auto-gen)
-│   └── timestamp_capture.dts         # Device Tree overlay
+│   └── timestamp_capture_regs.h      # C header (auto-gen)
 │
 ├── docs/                             # Documentation
 │   ├── QEDMMA_System_Architecture_v1.3.docx
 │   ├── QEDMMA_Technical_Appendix_v1.3.md
 │   ├── QEDMMA_BOM_v1.3.xlsx
-│   └── QEDMMA_Architecture_Diagrams.md
+│   ├── QEDMMA_v2.0_COMMUNICATION_SPEC.md  # ⭐ NEW
+│   └── QEDMMA_v2.0_UPGRADE_PROPOSAL.md    # ⭐ NEW
 │
 ├── regs/                             # Register Definitions (SSOT)
-│   └── timestamp_capture_regs.yaml
+│   ├── timestamp_capture_regs.yaml
+│   ├── ddc_core_regs.yaml
+│   ├── correlator_regs.yaml
+│   └── comm_controller_regs.yaml     # ⭐ NEW
 │
 ├── scripts/                          # Build & Generation Scripts
-│   └── gen_regs.py                   # YAML → RTL/C/Python generator
+│   ├── gen_regs.py                   # YAML → RTL/C/Python generator
+│   └── vivado/                       # Vivado TCL scripts
 │
 ├── constraints/                      # FPGA Constraints
 │   └── timing_zu47dr.xdc             # Timing for ZU47DR RFSoC
@@ -78,53 +113,55 @@ QEDMMA-Radar-System/
                                      │
                                      ▼
                               ┌──────────────┐
-                              │  CS Encoder  │ (Optional)
-                              │  2-10× compr │
+                              │ CS Encoder   │
+                              │ (Compressed) │
                               └──────────────┘
 ```
 
-### RTL Modules
+## 📡 v2.0 Communication Architecture
 
-| Module | LOC | Function |
-|--------|-----|----------|
-| `timestamp_capture.sv` | 860 | Sub-ns PPS timestamping |
-| `ddc_core.sv` | 282 | NCO + Mixer + CIC filter |
-| `cross_correlator.sv` | 376 | FFT correlation + TDOA |
-| `cs_encoder.sv` | 263 | Compressed sensing |
-| `qedmma_rx_top.sv` | 261 | Top-level integration |
-| **Total** | **2,042** | |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TRI-MODAL COMMUNICATION                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌───────────┐     ┌───────────┐     ┌───────────┐            │
+│   │    FSO    │     │  E-BAND   │     │  HF NVIS  │            │
+│   │  1550 nm  │     │ 71-86 GHz │     │  3-10 MHz │            │
+│   │  10 Gbps  │     │  10 Gbps  │     │  9.6 kbps │            │
+│   │   LPI/D   │     │   narrow  │     │   BLOS    │            │
+│   └─────┬─────┘     └─────┬─────┘     └─────┬─────┘            │
+│         │                 │                 │                   │
+│         └─────────────────┴─────────────────┘                   │
+│                           │                                     │
+│                  ┌────────┴────────┐                           │
+│                  │ COMM CONTROLLER │                           │
+│                  │ • Auto failover │                           │
+│                  │ • AES-256-GCM   │                           │
+│                  │ • Mesh routing  │                           │
+│                  └─────────────────┘                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🚀 Quick Start
+## 🔨 Build Instructions
 
 ### Prerequisites
-
-- Vivado 2024.1+ (for synthesis)
-- Verilator 5.0+ (for simulation)
+- Vivado 2024.1+ (for ZU47DR RFSoC)
 - Python 3.10+ with cocotb
-- GNU Make
+- Verilator 5.0+
 
-### Build & Test
-
+### Simulation
 ```bash
-# Clone repository
-git clone https://github.com/mladen1312/QEDMMA-Radar-System.git
-cd QEDMMA-Radar-System
-
-# Run simulation
 cd tb
-make SIM=verilator
-
-# Run lint check
-verilator --lint-only -Wall rtl/*.sv
-
-# Regenerate registers from YAML
-python scripts/gen_regs.py
+make                          # Run all tests
+make test_link_monitor        # Test link monitor
+make test_comm_top            # Test full controller
 ```
 
-### Vivado Synthesis
-
+### Synthesis
 ```bash
 cd scripts/vivado
 vivado -mode batch -source create_project.tcl
@@ -133,71 +170,35 @@ vivado -mode batch -source run_synthesis.tcl
 
 ---
 
-## 📊 Performance Specifications
+## 📊 Performance Comparison
 
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Detection Range | >150 km | RCS 0.01 m² (stealth) |
-| Localization | <500 m CEP | 4-node TDOA |
-| E-field Sensitivity | 500 nV/m/√Hz | Rydberg sensor |
-| Timestamp Resolution | <1 ns | White Rabbit sync |
-| Processing Latency | <100 ms | Target-to-track |
-| Simultaneous Tracks | 50+ | IMM filter |
-
----
-
-## 💰 Budget Estimate (Phase I Prototype)
-
-| Item | Cost |
-|------|------|
-| Rx Quantum Node (×2) | €329,000 |
-| Tx Illuminator | €60,000 |
-| C2 Fusion Server | €25,000 |
-| Field Testing | €50,000 |
-| R&D Labor (12 mo) | €288,000 |
-| **Total** | **€752,000** |
-
----
-
-## 📋 CI/CD Pipeline
-
-GitHub Actions automatically runs on every push:
-
-1. **Lint** - Verilator `--lint-only` RTL check
-2. **Simulation** - Cocotb tests with Verilator
-3. **Synthesis Check** - Yosys open-source synth
-4. **Driver Build** - CMake compilation
-
----
-
-## 📚 Documentation
-
-- [System Architecture v1.3](docs/QEDMMA_System_Architecture_v1.3.docx)
-- [Technical Appendix](docs/QEDMMA_Technical_Appendix_v1.3.md)
-- [BOM v1.3](docs/QEDMMA_BOM_v1.3.xlsx)
-- [Architecture Diagrams](docs/QEDMMA_Architecture_Diagrams.md)
-
----
-
-## 👤 Author
-
-**Dr. Mladen Mešter**  
-Zagreb, Croatia
-
----
-
-## ⚠️ Export Control Notice
-
-This technology may be subject to export control regulations. Contact the author before sharing outside authorized channels.
+| Metric | v1.3 | v2.0 | Improvement |
+|--------|------|------|-------------|
+| Detection Range | 150 km | 380 km | +2.5× |
+| Tx Power | 5 kW | 25 kW | +7 dB |
+| Rydberg Sensitivity | 500 nV/m | 200 nV/m | +8 dB |
+| Communication | None | Tri-modal | ∞ |
+| Redundancy | N/A | N+2 | Full |
+| Anti-Jam | None | LPI/LPD + FHSS | Military-grade |
+| Failover Time | N/A | <100 ms | Spec |
 
 ---
 
 ## 📄 License
 
-Proprietary - All Rights Reserved  
+**PROPRIETARY - ALL RIGHTS RESERVED**
+
 © 2026 Dr. Mladen Mešter
+
+This repository contains proprietary technology. Unauthorized copying, distribution, or use is strictly prohibited.
 
 ---
 
-*QEDMMA Radar System v1.3*  
-*January 2026*
+## 📞 Contact
+
+**Dr. Mladen Mešter**  
+Radar Systems Architect
+
+---
+
+*Last updated: January 31, 2026*
