@@ -1,10 +1,10 @@
 # =============================================================================
 # QEDMMA Timestamp Capture Unit - Register Definition (SSOT)
-# Version: 1.0.0
-# Author: Radar Systems Architect v9.0
-# Date: 2026-01-31
-# 
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
+#
 # This YAML serves as Single Source of Truth for:
+#   - RTL register package generation (.sv)
 #   - RTL register package generation (.sv)
 #   - C header generation (.h)
 #   - Python driver generation (.py)
