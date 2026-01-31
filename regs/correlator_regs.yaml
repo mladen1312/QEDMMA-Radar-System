@@ -1,5 +1,6 @@
 # QEDMMA Cross-Correlator Register Map
-# Radar Systems Architect v9.0 - Forge Spec
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 # SSOT - Single Source of Truth
 
 module:
@@ -26,9 +27,6 @@ registers:
       - name: CONTINUOUS
         bits: [2]
         description: "Continuous mode (auto-restart)"
-      - name: SOFT_RESET
-        bits: [31]
-        description: "Software reset"
 
   - name: FFT_CONFIG
     offset: 0x04
@@ -39,22 +37,6 @@ registers:
       - name: FFT_SIZE
         bits: [12, 0]
         description: "FFT size (256, 512, 1024, 2048, 4096)"
-      - name: WINDOW_TYPE
-        bits: [17, 16]
-        description: "Window function (0=None, 1=Hann, 2=Hamming, 3=Blackman)"
-      - name: ZERO_PAD
-        bits: [20]
-        description: "Enable zero-padding to 2× size"
-
-  - name: THRESHOLD
-    offset: 0x08
-    description: "Peak Detection Threshold"
-    access: RW
-    reset: 0x00001000
-    fields:
-      - name: THRESHOLD
-        bits: [23, 0]
-        description: "Minimum peak magnitude for valid TDOA"
 
   - name: STATUS
     offset: 0x10
@@ -67,16 +49,10 @@ registers:
         description: "Correlation in progress"
       - name: DONE
         bits: [1]
-        description: "Correlation complete (sticky, clear on read)"
+        description: "Correlation complete"
       - name: VALID
         bits: [2]
         description: "Valid TDOA result available"
-      - name: OVERFLOW
-        bits: [3]
-        description: "FFT overflow detected"
-      - name: STATE
-        bits: [7, 4]
-        description: "FSM state"
 
   - name: TDOA_INT
     offset: 0x20
@@ -108,51 +84,12 @@ registers:
         bits: [23, 0]
         description: "Correlation peak magnitude"
 
-  - name: PEAK_INDEX
-    offset: 0x2C
-    description: "Peak Index in FFT"
-    access: RO
-    reset: 0x00000000
-    fields:
-      - name: INDEX
-        bits: [12, 0]
-        description: "Index of peak in correlation output"
-
-  - name: SNR
-    offset: 0x30
-    description: "Signal-to-Noise Ratio Estimate"
-    access: RO
-    reset: 0x00000000
-    fields:
-      - name: SNR_DB
-        bits: [15, 0]
-        description: "Estimated SNR in dB (8.8 fixed point)"
-
-  - name: LATENCY
-    offset: 0x34
-    description: "Processing Latency (clock cycles)"
-    access: RO
-    reset: 0x00000000
-    fields:
-      - name: LATENCY
-        bits: [31, 0]
-        description: "Cycles from start to done"
-
   - name: VERSION
     offset: 0x3C
     description: "IP Version Register"
     access: RO
     reset: 0x02000000
     fields:
-      - name: PATCH
-        bits: [7, 0]
-        description: "Patch version"
-      - name: MINOR
-        bits: [15, 8]
-        description: "Minor version"
       - name: MAJOR
         bits: [23, 16]
         description: "Major version"
-      - name: ID
-        bits: [31, 24]
-        description: "Module ID (0x02 = Correlator)"
