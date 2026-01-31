@@ -1,8 +1,7 @@
 // =============================================================================
 // QEDMMA Timestamp Capture Unit - Top Level Module
-// Version: 1.0.0
-// Author: Radar Systems Architect v9.0
-// Date: 2026-01-31
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Description:
 //   Sub-nanosecond timestamp capture unit for TDOA processing in QEDMMA system.
