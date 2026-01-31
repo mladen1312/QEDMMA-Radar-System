@@ -1,5 +1,6 @@
 # QEDMMA Timestamp Capture - Cocotb Testbench Makefile
-# Radar Systems Architect v9.0 - Forge Spec
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 
 # Simulator selection (verilator for CI, questa for local)
 SIM ?= verilator
