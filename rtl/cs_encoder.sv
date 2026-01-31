@@ -1,19 +1,19 @@
-//==============================================================================
+//-----------------------------------------------------------------------------
 // QEDMMA Compressed Sensing Encoder
-// Radar Systems Architect v9.0 - Forge Spec
-//
-// Description:
-//   Implements compressed sensing (CS) encoding for bandwidth-efficient
-//   transmission of radar samples from distributed Rx nodes to C2 center.
-//   Uses pseudo-random measurement matrix (Φ) for RIP-compliant compression.
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Features:
-//   - Configurable compression ratio (M/N, typically 0.1-0.3)
-//   - LFSR-based pseudo-random measurement matrix generation
-//   - AXI-Stream input/output interfaces
-//   - Real-time encoding at 250 MSPS input rate
-//   - Resource-efficient multiply-accumulate architecture
+//   - Random measurement matrix (Gaussian/Bernoulli)
+//   - Streaming architecture for real-time compression
+//   - Configurable compression ratio (2x to 10x)
+//   - LFSR-based pseudo-random matrix generation
 //
+// [REQ-CS-001] Compression ratio: 2x to 10x configurable
+// [REQ-CS-002] Input: 1024-point complex spectrum
+// [REQ-CS-003] Measurement matrix: LFSR-generated ±1 (Bernoulli)
+// [REQ-CS-004] Output: M compressed measurements (M = N/CR)
+//-----------------------------------------------------------------------------
 // References:
 //   - [REQ-CS-001] Compression ratio ≥ 4:1 for network bandwidth
 //   - [REQ-CS-002] Reconstruction SNR loss < 3 dB
