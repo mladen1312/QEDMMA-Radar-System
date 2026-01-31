@@ -1,11 +1,11 @@
 // =============================================================================
 // QEDMMA Timestamp Capture Unit - Register Package
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
+//
 // Auto-generated from: timestamp_capture_regs.yaml
-// Version: 1.0.0
-// Date: 2026-01-31
-// 
 // DO NOT EDIT MANUALLY - Regenerate from YAML source
-// Generator: QEDMMA Forge v9.0
+// =============================================================================
 // =============================================================================
 // [REQ-TS-003] AXI4-Lite register interface
 
