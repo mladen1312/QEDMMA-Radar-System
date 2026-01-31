@@ -1,6 +1,7 @@
 //==============================================================================
 // QEDMMA TDOA Geolocation Solver
-// Radar Systems Architect v9.0 - Forge Spec
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Description:
 //   Implements Chan-Ho closed-form TDOA geolocation algorithm with
