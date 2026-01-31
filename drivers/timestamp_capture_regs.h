@@ -1,12 +1,12 @@
 /**
  * @file timestamp_capture_regs.h
  * @brief Sub-nanosecond timestamp capture unit for QEDMMA TDOA processing
+ * @author Dr. Mladen Mešter
+ * @copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
  *
  * Auto-generated from YAML - DO NOT EDIT MANUALLY
- * Generator: QEDMMA Forge v9.0
- * Generated: 2026-01-31 11:17:23
- * Version: 1.0.0
  */
+
 
 #ifndef __TIMESTAMP_CAPTURE_REGS_H__
 #define __TIMESTAMP_CAPTURE_REGS_H__
