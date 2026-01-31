@@ -1,0 +1,632 @@
+# QEDMMA System Architecture Document v1.3
+## Quantum-Enhanced Distributed Metamaterial Multistatic Array
+### Anti-Stealth Detection & Precision Weapon Guidance System
+
+**Document Classification:** PROPRIETARY - EXPORT CONTROLLED  
+**Version:** 1.3 "Reality Check"  
+**Date:** 31 January 2026  
+**Author:** Radar Systems Architect v9.0 - Forge Spec  
+**Prepared for:** Dr. Mladen Mešter, Principal Investigator
+
+---
+
+## Table of Contents
+
+1. [Executive Summary](#1-executive-summary)
+2. [The Stealth Problem: Why Current Radars Fail](#2-the-stealth-problem)
+3. [QEDMMA Solution: The Physics of "Lighting Up" Stealth](#3-qedmma-solution)
+4. [System Architecture Overview](#4-system-architecture-overview)
+5. [Subsystem Deep Dive: Quantum Receiver (Rx Node)](#5-quantum-receiver)
+6. [Subsystem Deep Dive: VHF Illuminator (Tx Node)](#6-vhf-illuminator)
+7. [Subsystem Deep Dive: C2 Fusion Center](#7-c2-fusion-center)
+8. [Signal Processing Chain](#8-signal-processing-chain)
+9. [TDOA Geolocation Algorithm](#9-tdoa-geolocation)
+10. [Target Tracking & State Estimation](#10-target-tracking)
+11. [Weapon Guidance Interface](#11-weapon-guidance-interface)
+12. [Performance Specifications](#12-performance-specifications)
+13. [Operational Deployment Scenarios](#13-operational-scenarios)
+14. [Requirements Traceability Matrix](#14-requirements-traceability)
+
+---
+
+## 1. Executive Summary
+
+### 1.1 Mission Statement
+
+**QEDMMA** je revolucionarni radarni sustav dizajniran za detekciju i praćenje "nevidljivih" stealth platformi (aviona, krstarećih raketa, dronova) te precizno navođenje obrambenih projektila na mete na velikim udaljenostima (>150 km).
+
+### 1.2 Core Innovation
+
+QEDMMA kombinira **tri disruptivne tehnologije**:
+
+| Tehnologija | Prednost | Zašto radi protiv stealtha |
+|-------------|----------|----------------------------|
+| **Bistatički VHF radar** | RCS pojačanje 10-30 dB | Stealth je optimiziran za monostatički X-band, ne za VHF |
+| **Rydberg kvantni senzor** | Osjetljivost <500 nV/m/√Hz | Detektira signale ispod termalnog šuma |
+| **Distribuirana TDOA mreža** | Preciznost <500 m | Nema povratnog signala koji otkriva položaj |
+
+### 1.3 Key Performance Indicators (Target)
+
+| Parametar | Specifikacija v1.3 | Napomena |
+|-----------|---------------------|----------|
+| **Domet detekcije** | >150 km (RCS 0.01 m²) | Bistatički link |
+| **Preciznost lokalizacije** | <500 m CEP | TDOA sa 4+ čvora |
+| **Ažuriranje pozicije** | 1-5 Hz | Ovisi o SNR |
+| **Track-while-scan** | 50+ simultanih meta | AI-enhanced tracker |
+| **Weapon datalink latency** | <100 ms | UDP over tactical network |
+
+---
+
+## 2. The Stealth Problem: Why Current Radars Fail
+
+### 2.1 Kako stealth tehnologija radi
+
+Stealth avioni (F-22, F-35, Su-57, B-21) koriste kombinaciju tehnika za smanjenje **Radar Cross Section (RCS)**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    STEALTH DESIGN PRINCIPLES                     │
+├─────────────────────────────────────────────────────────────────┤
+│  1. SHAPE: Ravne površine pod kutom → refleksija MIMO radara    │
+│  2. RAM: Radar Absorbing Material → pretvara RF u toplinu       │
+│  3. EDGE ALIGNMENT: Sve ivice paralelne → smanjuje # smjerova   │
+│  4. INTERNAL WEAPONS: Nema vanjskog tereta → glatka površina    │
+│  5. PLANFORM ALIGNMENT: Krila/rep pod istim kutom               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Rezultat:** F-22 ima frontalni RCS od ~0.0001-0.001 m² na X-bandu (10 GHz), što je ekvivalentno metalnoj kuglici promjera ~1 cm.
+
+### 2.2 Zašto konvencionalni radari ne mogu vidjeti stealth
+
+**Radar Range Equation (monostatički):**
+
+$$R_{max} = \left( \frac{P_t \cdot G^2 \cdot \lambda^2 \cdot \sigma}{(4\pi)^3 \cdot k \cdot T_s \cdot B \cdot (S/N)_{min}} \right)^{1/4}$$
+
+Gdje je:
+- $P_t$ = snaga odašiljača (W)
+- $G$ = dobitak antene
+- $\lambda$ = valna duljina (m)
+- $\sigma$ = RCS mete (m²)
+- $k$ = Boltzmannova konstanta
+- $T_s$ = sistemska temperatura šuma (K)
+- $B$ = širina pojasa (Hz)
+- $(S/N)_{min}$ = minimalni omjer signal/šum
+
+**Problem:** Ako RCS padne za 40 dB (stealth vs konvencionalni avion), domet pada za faktor $10^{40/4} = 10^{10} = 100×$.
+
+Radar koji vidi konvencionalni avion na 400 km će stealth vidjeti tek na **4 km** - kada je već prekasno.
+
+### 2.3 Tri "Achilles' Heel" stealth tehnologije
+
+Stealth dizajn ima **fundamentalna fizikalna ograničenja**:
+
+| Slabost | Fizikalni razlog | Kako QEDMMA eksploatira |
+|---------|------------------|-------------------------|
+| **Frekvencija** | RAM ne radi na VHF (<300 MHz) | Koristimo 100-200 MHz |
+| **Kut** | Optimiziran samo za frontalni aspekt | Bistatički kutovi |
+| **Monostatičnost** | Oblikovanje za povrat na odašiljač | Prijemnik je drugdje |
+
+---
+
+## 3. QEDMMA Solution: The Physics of "Lighting Up" Stealth
+
+### 3.1 Princip 1: VHF Resonance Effect
+
+Kada je valna duljina radara usporediva s fizičkim dimenzijama aviona, dolazi do **rezonantnog raspršenja**.
+
+**Kritična dimenzija:**
+$$\lambda_{resonance} \approx 2L$$
+
+Gdje je $L$ karakteristična dimenzija aviona.
+
+| Avion | Raspon krila | Rezonantna frekvencija |
+|-------|--------------|------------------------|
+| F-22 | 13.6 m | ~11 MHz (HF) |
+| F-35 | 10.7 m | ~14 MHz (HF) |
+| B-21 | ~40 m | ~3.75 MHz (MF) |
+
+Na **VHF (100-200 MHz, λ=1.5-3 m)**, strukturni elementi aviona (ivice krila, rep, motor) postaju **rezonantni raspršivači** čak i s RAM premazom.
+
+**RCS Enhancement Factor:**
+
+$$\sigma_{VHF} \approx 10^{1.5} \times \sigma_{X-band} = 30× = 15 \text{ dB}$$
+
+### 3.2 Princip 2: Bistatic RCS Advantage
+
+U bistatičkoj geometriji, odašiljač (Tx) i prijemnik (Rx) su na različitim lokacijama.
+
+```
+                    ★ META (Stealth avion)
+                   /|\
+                  / | \
+                 /  |  \
+                /   |   \
+               /    |    \
+              /     |     \
+           R_t     σ_b    R_r
+            /       |       \
+           /        |        \
+          /         |         \
+    [TX]────────────β────────────[RX]
+   Odašiljač    Bistatički     Prijemnik
+   (5 kW VHF)     kut        (Rydberg)
+```
+
+**Bistatički RCS** ovisi o kutu $\beta$ između Tx-meta i meta-Rx:
+
+Za $\beta > 90°$ (forward scatter):
+
+$$\sigma_{bistatic}(\beta) \approx \sigma_{mono} \times \left(\frac{\lambda}{2\pi a}\right)^{-2} \times F(\beta)$$
+
+Gdje $F(\beta)$ može dostići **10-20 dB** pojačanja za određene kutove.
+
+**Praktični rezultat:**  
+Stealth avion s $\sigma_{mono} = 0.001 \text{ m}^2$ na X-bandu ima:
+
+$$\sigma_{bistatic,VHF} \approx 0.001 \times 30 \times 10 = 0.3-3 \text{ m}^2$$
+
+To je **RCS konvencionalnog aviona!**
+
+### 3.3 Princip 3: Rydberg Quantum Sensing
+
+Konvencionalni RF prijemnici su ograničeni termalnim šumom:
+
+$$P_{noise} = k \cdot T \cdot B \approx -174 \text{ dBm/Hz} \text{ @ 290K}$$
+
+**Rydberg atomski senzor** koristi **Electromagnetically Induced Transparency (EIT)** u atomima rubidija za direktno mjerenje RF električnog polja bez termalnog šuma antene.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                  RYDBERG EIT DETECTION PRINCIPLE                 │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│     PROBE LASER        COUPLING LASER        RF FIELD           │
+│        780 nm             480 nm           100-200 MHz          │
+│          │                  │                  │                │
+│          ▼                  ▼                  ▼                │
+│     ┌─────────────────────────────────────────────┐            │
+│     │               Rb-85 VAPOR CELL              │            │
+│     │                                             │            │
+│     │   5S₁/₂ ──780nm──► 5P₃/₂ ──480nm──► nD₅/₂   │            │
+│     │     │                                  ▲    │            │
+│     │     │            RF COUPLES            │    │            │
+│     │     │         ◄─────────────────►      │    │            │
+│     │     │          nD₅/₂ ↔ (n+1)P₃/₂       │    │            │
+│     │                                             │            │
+│     └─────────────────────────────────────────────┘            │
+│                          │                                     │
+│                          ▼                                     │
+│                   TRANSMITTED PROBE                            │
+│              (Intensity modulated by RF)                       │
+│                                                                │
+│     Signal: ΔI_probe ∝ |E_RF|² (directly proportional)        │
+│                                                                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Rydberg osjetljivost:**
+$$E_{min} = \frac{\hbar \Gamma}{\mu_{RF}} \approx 300-700 \text{ nV/m/}\sqrt{\text{Hz}}$$
+
+Gdje je:
+- $\Gamma$ = EIT linewidth (~1 MHz)
+- $\mu_{RF}$ = prijelazni dipolni moment (~1000 ea₀)
+
+**Usporedba s konvencionalnim prijemnikom:**
+
+| Parametar | Konvencionalni | Rydberg |
+|-----------|---------------|---------|
+| Noise floor | -174 dBm/Hz | -190 dBm/Hz equivalent |
+| Dinamički raspon | 60-80 dB | 70+ dB |
+| Self-jamming | Da (LNA saturacija) | Ne (linearni odziv) |
+| Broadband | Ograničen filterima | 1 MHz - 100 GHz |
+
+### 3.4 Kombinirani efekt: QEDMMA Detection Budget
+
+**Link Budget Calculation:**
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│               QEDMMA BISTATIC LINK BUDGET                       │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  Tx Power (P_t):                     +37 dBm (5 kW)           │
+│  Tx Antenna Gain (G_t):              +10 dBi (LPDA)           │
+│  Path Loss Tx→Target (R_t=100km):   -133 dB @ 150 MHz         │
+│  Target RCS (σ_b = 1 m²):            +0 dBsm                   │
+│  Path Loss Target→Rx (R_r=50km):    -127 dB @ 150 MHz         │
+│  Rx Antenna Gain (G_r):              +10 dBi (Metamaterial)   │
+│  ─────────────────────────────────────────────────────────────│
+│  Received Signal Power:              -203 dBm = -203 dBW      │
+│                                                                │
+│  Rydberg Noise Floor (1 MHz BW):     -190 dBm                 │
+│  ─────────────────────────────────────────────────────────────│
+│  SNR:                                -13 dB (pre-processing)  │
+│                                                                │
+│  Coherent Integration (10s):         +40 dB                   │
+│  ─────────────────────────────────────────────────────────────│
+│  FINAL SNR:                          +27 dB ✓ (Detectable)    │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Zaključak:** S koherentnom integracijom, QEDMMA može detektirati metu s RCS=1m² na 150 km (Tx-meta + meta-Rx ukupno).
+
+---
+
+## 4. System Architecture Overview
+
+### 4.1 High-Level Block Diagram
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                        QEDMMA SYSTEM ARCHITECTURE                          │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│    ┌─────────────┐                              ┌─────────────────────┐   │
+│    │  TX NODE    │                              │    C2 FUSION        │   │
+│    │ (Illuminator)│                             │     CENTER          │   │
+│    │             │         VHF SIGNAL           │                     │   │
+│    │ ┌─────────┐ │        ~~~~~~~~~~~>          │  ┌───────────────┐  │   │
+│    │ │Waveform │ │       /           \          │  │ GPU Server    │  │   │
+│    │ │Generator│ │      /    META     \         │  │ (TDOA/Track)  │  │   │
+│    │ └────┬────┘ │     /      ★        \        │  └───────┬───────┘  │   │
+│    │      │      │    /       │         \       │          │          │   │
+│    │ ┌────▼────┐ │   /        │          \      │  ┌───────▼───────┐  │   │
+│    │ │ 10kW PA │ │  /         │           \     │  │ Weapon        │  │   │
+│    │ └────┬────┘ │ /          │            \    │  │ Datalink      │  │   │
+│    │      │      │/           │             \   │  └───────────────┘  │   │
+│    │ ┌────▼────┐ │            │              \  │                     │   │
+│    │ │  LPDA   │ │            │               \ │                     │   │
+│    │ │ Antenna │ │            │                \│                     │   │
+│    │ └─────────┘ │            │                 │                     │   │
+│    └─────────────┘            │                 └─────────────────────┘   │
+│           │                   │                          ▲               │
+│           │                   │                          │               │
+│     White Rabbit              │                    Ethernet/Fiber        │
+│     Timing Link               │                    (Low Latency)         │
+│           │                   │                          │               │
+│           ▼                   ▼                          │               │
+│    ┌─────────────┐     ┌─────────────┐     ┌─────────────┴───┐          │
+│    │  RX NODE 1  │     │  RX NODE 2  │     │   RX NODE 3     │          │
+│    │  (Rydberg)  │     │  (Rydberg)  │     │   (Rydberg)     │          │
+│    │             │     │             │     │                 │          │
+│    │ ┌─────────┐ │     │ ┌─────────┐ │     │ ┌─────────────┐ │          │
+│    │ │Metamat. │ │     │ │Metamat. │ │     │ │ Metamat.    │ │          │
+│    │ │ Array   │ │     │ │ Array   │ │     │ │ Array       │ │          │
+│    │ └────┬────┘ │     │ └────┬────┘ │     │ └──────┬──────┘ │          │
+│    │      │      │     │      │      │     │        │        │          │
+│    │ ┌────▼────┐ │     │ ┌────▼────┐ │     │ ┌──────▼──────┐ │          │
+│    │ │Rydberg  │ │     │ │Rydberg  │ │     │ │ Rydberg     │ │          │
+│    │ │Sensor   │ │     │ │Sensor   │ │     │ │ Sensor      │ │          │
+│    │ └────┬────┘ │     │ └────┬────┘ │     │ └──────┬──────┘ │          │
+│    │      │      │     │      │      │     │        │        │          │
+│    │ ┌────▼────┐ │     │ ┌────▼────┐ │     │ ┌──────▼──────┐ │          │
+│    │ │ RFSoC   │ │     │ │ RFSoC   │ │     │ │  RFSoC      │ │          │
+│    │ │(Timestamp│ │     │ │(Timestamp│ │     │ │ (Timestamp) │ │          │
+│    │ │+ FPGA)  │ │     │ │+ FPGA)  │ │     │ │             │ │          │
+│    │ └────┬────┘ │     │ └────┬────┘ │     │ └──────┬──────┘ │          │
+│    │      │      │     │      │      │     │        │        │          │
+│    │ ┌────▼────┐ │     │ ┌────▼────┐ │     │ ┌──────▼──────┐ │          │
+│    │ │CSAC+WR  │ │     │ │CSAC+WR  │ │     │ │ CSAC+WR     │ │          │
+│    │ │Timing   │ │     │ │Timing   │ │     │ │ Timing      │ │          │
+│    │ └─────────┘ │     │ └─────────┘ │     │ └─────────────┘ │          │
+│    └─────────────┘     └─────────────┘     └─────────────────┘          │
+│          │                    │                    │                    │
+│          └────────────────────┼────────────────────┘                    │
+│                               │                                         │
+│                      White Rabbit Network                               │
+│                    (Sub-nanosecond sync)                               │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Data Flow
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         QEDMMA DATA FLOW                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  TX                    PROPAGATION              RX NODES                 │
+│  ════                  ═══════════              ════════                 │
+│                                                                          │
+│  ┌─────────┐          ┌─────────┐          ┌─────────────────────────┐  │
+│  │ PRBS/   │          │ Target  │          │     RX NODE 1           │  │
+│  │ Chirp   │──VHF────►│ (σ_b)   │───┬─────►│ t₁ = TOA + Δt₁         │  │
+│  │ Waveform│  5 kW    │         │   │      └─────────────────────────┘  │
+│  └─────────┘          └─────────┘   │                                   │
+│       │                    │        │      ┌─────────────────────────┐  │
+│       │                    │        ├─────►│     RX NODE 2           │  │
+│       │                    │        │      │ t₂ = TOA + Δt₂         │  │
+│       │                    │        │      └─────────────────────────┘  │
+│       │                    │        │                                   │
+│       │                    │        │      ┌─────────────────────────┐  │
+│       │                    │        └─────►│     RX NODE 3           │  │
+│       │                    │               │ t₃ = TOA + Δt₃         │  │
+│       │                    │               └─────────────────────────┘  │
+│       │                    │                          │                 │
+│       │                    │                          ▼                 │
+│       │                    │               ┌─────────────────────────┐  │
+│       │      Direct        │               │    C2 FUSION CENTER     │  │
+│       └─────path───────────┼──────────────►│                         │  │
+│             (t₀)           │               │  TDOA = tᵢ - tⱼ         │  │
+│                            │               │                         │  │
+│                            │               │  ┌───────────────────┐  │  │
+│                            │               │  │ HYPERBOLIC        │  │  │
+│                            │               │  │ INTERSECTION      │  │  │
+│                            │               │  │                   │  │  │
+│                            │               │  │ (x, y, z, vx, vy) │  │  │
+│                            │               │  └─────────┬─────────┘  │  │
+│                            │               │            │            │  │
+│                            │               │  ┌─────────▼─────────┐  │  │
+│                            │               │  │ KALMAN TRACKER    │  │  │
+│                            │               │  │ (EKF/UKF/IMM)     │  │  │
+│                            │               │  └─────────┬─────────┘  │  │
+│                            │               │            │            │  │
+│                            │               │  ┌─────────▼─────────┐  │  │
+│                            │               │  │ WEAPON GUIDANCE   │  │  │
+│                            │               │  │ DATALINK          │  │  │
+│                            │               │  │ (Target State)    │  │  │
+│                            │               │  └───────────────────┘  │  │
+│                            │               └─────────────────────────┘  │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Subsystem Deep Dive: Quantum Receiver (Rx Node)
+
+### 5.1 Rx Node Block Diagram
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                      QEDMMA RX NODE ARCHITECTURE                          │
+│                        (Quantum-Enhanced Receiver)                        │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │                    RF FRONT-END SUBSYSTEM                           │ │
+│  │  ┌─────────────┐    ┌─────────┐    ┌─────────┐    ┌─────────────┐  │ │
+│  │  │Metamaterial │───►│ BPF     │───►│ LNA     │───►│ Bias Tee    │  │ │
+│  │  │Array (1m²)  │    │100-200  │    │NF<1.5dB │    │             │  │ │
+│  │  │Gain: 10dBi  │    │MHz      │    │G=20dB   │    │             │  │ │
+│  │  └─────────────┘    └─────────┘    └─────────┘    └──────┬──────┘  │ │
+│  │                                                           │         │ │
+│  └───────────────────────────────────────────────────────────┼─────────┘ │
+│                                                               │           │
+│  ┌───────────────────────────────────────────────────────────▼─────────┐ │
+│  │                 RYDBERG QUANTUM SENSOR SUBSYSTEM                    │ │
+│  │                                                                     │ │
+│  │  ┌─────────────┐         ┌──────────────────┐       ┌───────────┐  │ │
+│  │  │ PROBE LASER │────────►│                  │       │ Balanced  │  │ │
+│  │  │  780 nm     │         │    Rb-85         │◄──RF──│ APD       │  │ │
+│  │  │  Toptica    │         │    VAPOR         │       │ Detector  │  │ │
+│  │  │  DL Pro     │         │    CELL          │──────►│           │  │ │
+│  │  └─────────────┘         │                  │       └─────┬─────┘  │ │
+│  │                          │  (25mm path)     │             │        │ │
+│  │  ┌─────────────┐         │  Mu-metal        │             │        │ │
+│  │  │COUPLING     │────────►│  Shield          │             │        │ │
+│  │  │LASER 480nm  │         │  TEC @ 40°C      │             │        │ │
+│  │  │ Coherent    │         │                  │             │        │ │
+│  │  └─────────────┘         └──────────────────┘             │        │ │
+│  │                                                            │        │ │
+│  │  ┌─────────────┐                                          │        │ │
+│  │  │ LASER LOCK  │◄──────────────────────────────────────────┘        │ │
+│  │  │ ELECTRONICS │  (PDH Feedback)                                   │ │
+│  │  │ (Custom PCB)│                                                   │ │
+│  │  └──────┬──────┘                                                   │ │
+│  │         │                                                          │ │
+│  └─────────┼──────────────────────────────────────────────────────────┘ │
+│            │                                                             │
+│  ┌─────────▼──────────────────────────────────────────────────────────┐ │
+│  │              SIGNAL PROCESSING SUBSYSTEM (RFSoC)                   │ │
+│  │                                                                     │ │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │ │
+│  │  │  ADC     │  │ Digital  │  │ Matched  │  │ Timestamp        │   │ │
+│  │  │ 5 GSPS   │─►│ Downconv │─►│ Filter   │─►│ Capture          │   │ │
+│  │  │ 14-bit   │  │          │  │ (PRBS    │  │ (Sub-ns)         │   │ │
+│  │  │          │  │          │  │  corr)   │  │                  │   │ │
+│  │  └──────────┘  └──────────┘  └──────────┘  └────────┬─────────┘   │ │
+│  │                                                      │             │ │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐          │             │ │
+│  │  │ PS ARM   │  │ DDR4     │  │ NVMe     │          │             │ │
+│  │  │ Cortex   │─►│ 16 GB    │─►│ 2 TB     │          │             │ │
+│  │  │ A53      │  │ Buffer   │  │ Storage  │          │             │ │
+│  │  └──────────┘  └──────────┘  └──────────┘          │             │ │
+│  │                                                      │             │ │
+│  └──────────────────────────────────────────────────────┼─────────────┘ │
+│                                                          │               │
+│  ┌──────────────────────────────────────────────────────▼─────────────┐ │
+│  │                     TIMING SUBSYSTEM                               │ │
+│  │                                                                     │ │
+│  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐  │ │
+│  │  │ White Rabbit │    │ CSAC         │    │ GPS Disciplined      │  │ │
+│  │  │ LEN (Slave)  │    │ Rb MAC SA.35m│    │ (Backup)             │  │ │
+│  │  │ <1 ns sync   │    │ Holdover     │    │ Trimble Resolution T │  │ │
+│  │  │              │    │ <200ns/4h    │    │                      │  │ │
+│  │  └──────┬───────┘    └──────┬───────┘    └───────────┬──────────┘  │ │
+│  │         │                   │                        │             │ │
+│  │         └───────────────────┼────────────────────────┘             │ │
+│  │                             │                                      │ │
+│  │                    ┌────────▼────────┐                            │ │
+│  │                    │ TIMING MUX      │                            │ │
+│  │                    │ + PPS Generator │                            │ │
+│  │                    └────────┬────────┘                            │ │
+│  │                             │                                      │ │
+│  └─────────────────────────────┼──────────────────────────────────────┘ │
+│                                │                                        │
+│  ┌─────────────────────────────▼──────────────────────────────────────┐ │
+│  │                     EDGE AI SUBSYSTEM                              │ │
+│  │                                                                     │ │
+│  │  ┌────────────────────────────────────────────────────────────┐   │ │
+│  │  │            NVIDIA Jetson Orin AGX 64GB                     │   │ │
+│  │  │                                                            │   │ │
+│  │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐    │   │ │
+│  │  │  │ Local       │  │ Clutter     │  │ Pre-Track       │    │   │ │
+│  │  │  │ Detection   │  │ Filter      │  │ Association     │    │   │ │
+│  │  │  │ (CFAR)      │  │ (CNN)       │  │ (JPDA)          │    │   │ │
+│  │  │  └─────────────┘  └─────────────┘  └─────────────────┘    │   │ │
+│  │  │                                                            │   │ │
+│  │  └────────────────────────────────────────────────────────────┘   │ │
+│  │                                                                     │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │              COMMUNICATIONS & NETWORKING                            │ │
+│  │                                                                     │ │
+│  │  ┌────────────┐    ┌────────────┐    ┌────────────────────────┐   │ │
+│  │  │ 25 GbE     │    │ WR Fiber   │    │ Tactical Radio         │   │ │
+│  │  │ to C2      │    │ (Timing)   │    │ (Backup Data)          │   │ │
+│  │  └────────────┘    └────────────┘    └────────────────────────┘   │ │
+│  │                                                                     │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Rydberg Sensor Physics Detail
+
+**Energy Level Diagram:**
+
+```
+                    RYDBERG STATE LADDER (Rb-85)
+                    
+    Energy ▲
+           │
+    (n+1)P ├─────────────●──────────  ~48 GHz coupling
+           │            /│\
+           │           / │ \
+           │      RF  /  │  \  RF
+           │    ─────/   │   \─────
+           │              │
+      nD   ├─────────────●──────────  Rydberg state (n~50-70)
+           │             ▲
+           │             │ 480 nm (Coupling laser)
+           │             │
+     5P₃/₂ ├─────────────●──────────  Intermediate state
+           │             ▲
+           │             │ 780 nm (Probe laser)
+           │             │
+     5S₁/₂ ├─────────────●──────────  Ground state
+           │
+           └──────────────────────────►
+```
+
+**EIT Transmission Spectrum:**
+
+```
+    Probe Transmission
+           ▲
+      1.0  │                    ┌───────┐
+           │                   /         \
+           │                  /           \
+           │                 /             \
+      0.5  │                /               \
+           │               /                 \
+           │              /                   \
+           │    ─────────/                     \─────────
+      0.0  │
+           └─────────────┬────────────────────────────►
+                         │                    Probe Detuning
+                    Δp = 0
+                 (EIT Window)
+                 
+    With RF field: The EIT window SPLITS (Autler-Townes)
+    
+           ▲
+      1.0  │                 ┌──┐     ┌──┐
+           │                /    \   /    \
+           │               /      \ /      \
+           │              /        X        \
+      0.5  │             /        / \        \
+           │            /        /   \        \
+           │    ───────/        /     \        \───────
+      0.0  │
+           └──────────────────┬───────────────────────►
+                         Splitting ∝ |E_RF|
+                         (Measured quantity)
+```
+
+**Osjetljivost vs frekvencija:**
+
+| n (Principal) | RF Frequency | Sensitivity | Bandwidth |
+|---------------|--------------|-------------|-----------|
+| 50 | 50 GHz | ~100 nV/m/√Hz | 10 MHz |
+| 55 | 17 GHz | ~200 nV/m/√Hz | 8 MHz |
+| 60 | 6 GHz | ~300 nV/m/√Hz | 6 MHz |
+| **70** | **500 MHz** | **~500 nV/m/√Hz** | **20-60 MHz** |
+| 75 | 150 MHz | ~700 nV/m/√Hz | 30 MHz |
+
+**QEDMMA koristi n≈70-75 za VHF band (100-200 MHz).**
+
+### 5.3 Metamaterial Antenna Design
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                METAMATERIAL ARRAY STRUCTURE (1m × 1m)                  │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│   ┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │  ← Unit Cells  │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │    (10 × 10)   │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │●LNA│ UC │ UC │ UC │ UC │ UC │  ← Central    │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤     Feed      │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   ├────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤                │
+│   │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │ UC │                │
+│   └────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘                │
+│                                                                        │
+│   UNIT CELL DETAIL (100mm × 100mm):                                   │
+│                                                                        │
+│   ┌──────────────────────────────────────┐                            │
+│   │  ┌────────────────────────────────┐  │                            │
+│   │  │      SPLIT-RING RESONATOR      │  │    Layer 1: Rogers 4350B  │
+│   │  │  ┌──────────┐                  │  │    εr = 3.66, tanδ=0.004 │
+│   │  │  │  ┌────┐  │                  │  │                            │
+│   │  │  │  │    │  │  ←─── Gap        │  │    Layer 2: Ground plane   │
+│   │  │  │  └────┘  │       (tunable)  │  │                            │
+│   │  │  └──────────┘                  │  │    Layer 3: Microstrip     │
+│   │  │                                │  │    feed network            │
+│   │  └────────────────────────────────┘  │                            │
+│   │            ↕ 10mm                    │                            │
+│   └──────────────────────────────────────┘                            │
+│                                                                        │
+│   Resonant frequency: f₀ = c / (2π√(LC))                             │
+│   Target: f₀ = 150 MHz (VHF center)                                  │
+│   Bandwidth: 100-200 MHz (67% fractional BW with varactor tuning)    │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Subsystem Deep Dive: VHF Illuminator (Tx Node)
+
+### 6.1 Tx Node Block Diagram
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                    QEDMMA TX NODE (ILLUMINATOR)                        │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐ │
+│  │                   WAVEFORM GENERATION                            │ │
+│  │                                                                  │ │
+│  │  ┌────────────┐    ┌────────────┐    ┌────────────────────────┐ │ │
+│  │  │ Zynq-7000  │───►│ AD9361     │───►│ DAC                    │ │ │
+│  │  │ FPGA       │    │ Transceiver │   │ 16-bit, 500 MSPS       │ │ │
+│  │  │            │    │            │   
