@@ -1,0 +1,158 @@
+# QEDMMA Cross-Correlator Register Map
+# Radar Systems Architect v9.0 - Forge Spec
+# SSOT - Single Source of Truth
+
+module:
+  name: cross_correlator
+  description: "FFT-based Cross-Correlator for TDOA extraction"
+  version: "1.0"
+  base_address: 0x00020000
+  address_width: 12
+  data_width: 32
+
+registers:
+  - name: CTRL
+    offset: 0x00
+    description: "Correlator Control Register"
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: ENABLE
+        bits: [0]
+        description: "Enable correlator"
+      - name: START
+        bits: [1]
+        description: "Start correlation (self-clearing)"
+      - name: CONTINUOUS
+        bits: [2]
+        description: "Continuous mode (auto-restart)"
+      - name: SOFT_RESET
+        bits: [31]
+        description: "Software reset"
+
+  - name: FFT_CONFIG
+    offset: 0x04
+    description: "FFT Configuration"
+    access: RW
+    reset: 0x00000400
+    fields:
+      - name: FFT_SIZE
+        bits: [12, 0]
+        description: "FFT size (256, 512, 1024, 2048, 4096)"
+      - name: WINDOW_TYPE
+        bits: [17, 16]
+        description: "Window function (0=None, 1=Hann, 2=Hamming, 3=Blackman)"
+      - name: ZERO_PAD
+        bits: [20]
+        description: "Enable zero-padding to 2× size"
+
+  - name: THRESHOLD
+    offset: 0x08
+    description: "Peak Detection Threshold"
+    access: RW
+    reset: 0x00001000
+    fields:
+      - name: THRESHOLD
+        bits: [23, 0]
+        description: "Minimum peak magnitude for valid TDOA"
+
+  - name: STATUS
+    offset: 0x10
+    description: "Correlator Status"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: BUSY
+        bits: [0]
+        description: "Correlation in progress"
+      - name: DONE
+        bits: [1]
+        description: "Correlation complete (sticky, clear on read)"
+      - name: VALID
+        bits: [2]
+        description: "Valid TDOA result available"
+      - name: OVERFLOW
+        bits: [3]
+        description: "FFT overflow detected"
+      - name: STATE
+        bits: [7, 4]
+        description: "FSM state"
+
+  - name: TDOA_INT
+    offset: 0x20
+    description: "TDOA Result - Integer Part (signed samples)"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: TDOA_INT
+        bits: [15, 0]
+        description: "Signed integer sample offset"
+
+  - name: TDOA_FRAC
+    offset: 0x24
+    description: "TDOA Result - Fractional Part"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: TDOA_FRAC
+        bits: [15, 0]
+        description: "Fractional sample offset (16-bit fixed point)"
+
+  - name: PEAK_MAG
+    offset: 0x28
+    description: "Peak Magnitude"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: MAGNITUDE
+        bits: [23, 0]
+        description: "Correlation peak magnitude"
+
+  - name: PEAK_INDEX
+    offset: 0x2C
+    description: "Peak Index in FFT"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: INDEX
+        bits: [12, 0]
+        description: "Index of peak in correlation output"
+
+  - name: SNR
+    offset: 0x30
+    description: "Signal-to-Noise Ratio Estimate"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: SNR_DB
+        bits: [15, 0]
+        description: "Estimated SNR in dB (8.8 fixed point)"
+
+  - name: LATENCY
+    offset: 0x34
+    description: "Processing Latency (clock cycles)"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: LATENCY
+        bits: [31, 0]
+        description: "Cycles from start to done"
+
+  - name: VERSION
+    offset: 0x3C
+    description: "IP Version Register"
+    access: RO
+    reset: 0x02000000
+    fields:
+      - name: PATCH
+        bits: [7, 0]
+        description: "Patch version"
+      - name: MINOR
+        bits: [15, 8]
+        description: "Minor version"
+      - name: MAJOR
+        bits: [23, 16]
+        description: "Major version"
+      - name: ID
+        bits: [31, 24]
+        description: "Module ID (0x02 = Correlator)"
