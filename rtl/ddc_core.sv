@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // QEDMMA Digital Down Converter (DDC) Core
-// Radar Systems Architect v9.0 - Forge Spec
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Features:
 //   - NCO (Numerically Controlled Oscillator) with 32-bit phase accumulator
@@ -13,7 +14,6 @@
 // [REQ-DDC-003] NCO frequency resolution: < 1 Hz
 // [REQ-DDC-004] SFDR: > 90 dB
 //-----------------------------------------------------------------------------
-
 `timescale 1ns / 1ps
 
 module ddc_core #(
