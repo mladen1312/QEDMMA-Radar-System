@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // QEDMMA Receiver Top-Level Module
-// Radar Systems Architect v9.0 - Forge Spec
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Integrates complete signal processing chain:
 //   1. Timestamp Capture (PPS sync, sub-ns resolution)
@@ -15,7 +16,6 @@
 // [REQ-TOP-003] AXI4-Lite control interface
 // [REQ-TOP-004] Streaming output via AXI4-Stream
 //-----------------------------------------------------------------------------
-
 `timescale 1ns / 1ps
 
 module qedmma_rx_top #(
