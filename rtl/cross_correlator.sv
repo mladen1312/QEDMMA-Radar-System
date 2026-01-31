@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // QEDMMA Cross-Correlator for TDOA Extraction
-// Radar Systems Architect v9.0 - Forge Spec
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Features:
 //   - FFT-based cross-correlation (radix-2 butterfly)
@@ -13,8 +14,6 @@
 // [REQ-CORR-003] Processing latency: < 2 * FFT_SIZE cycles
 // [REQ-CORR-004] Dynamic range: > 80 dB
 //-----------------------------------------------------------------------------
-
-`timescale 1ns / 1ps
 
 module cross_correlator #(
     parameter DATA_WIDTH   = 16,
