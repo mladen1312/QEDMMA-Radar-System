@@ -1,3 +1,7 @@
+# QEDMMA CI/CD Pipeline
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
+
 name: QEDMMA CI/CD Pipeline
 
 on:
@@ -6,10 +10,9 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '0 0 * * 0'  # Weekly run (nedjelja u ponoć)
+    - cron: '0 0 * * 0'  # Weekly run
 
 jobs:
-  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
