@@ -1,39 +1,43 @@
-# QEDMMA Timestamp Capture - Cocotb Testbench Makefile
+# QEDMMA v2.0 Communication Controller Testbench Makefile
 # Author: Dr. Mladen Mešter
 # Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 
-# Simulator selection (verilator for CI, questa for local)
+# Simulator
 SIM ?= verilator
-TOPLEVEL_LANG = verilog
+TOPLEVEL_LANG ?= verilog
 
 # Source files
-VERILOG_SOURCES = $(PWD)/../rtl/timestamp_capture_regs_pkg.sv
-VERILOG_SOURCES += $(PWD)/../rtl/timestamp_capture.sv
+VERILOG_SOURCES = $(PWD)/../rtl/failover_fsm.sv
+VERILOG_SOURCES += $(PWD)/../rtl/link_monitor.sv
+VERILOG_SOURCES += $(PWD)/../rtl/comm_controller_top.sv
 
-# Top-level module
-TOPLEVEL = timestamp_capture
+# Top-level module for each test
+TOPLEVEL = failover_fsm
 
 # Python test module
-MODULE = test_timestamp_capture
+MODULE = test_failover_fsm
 
-# Verilator specific flags
+# Verilator flags
+EXTRA_ARGS += --timing
+EXTRA_ARGS += -Wno-fatal
 EXTRA_ARGS += --trace --trace-structs
-EXTRA_ARGS += -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC -Wno-TIMESCALEMOD
 
-# Include cocotb makefile
+# Cocotb parameters
+export COCOTB_RESOLVE_X = ZEROS
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-# Custom targets
-.PHONY: test clean-all lint
+# Additional targets
+.PHONY: clean_all lint
 
-test: sim
+clean_all: clean
+	rm -rf __pycache__ results.xml *.vcd
 
 lint:
-	verilator --lint-only -Wall $(VERILOG_SOURCES)
+	verilator --lint-only -Wall ../rtl/*.sv
 
-clean-all: clean
-	rm -rf __pycache__ *.vcd *.fst sim_build results.xml
+test_link_monitor:
+	$(MAKE) TOPLEVEL=link_monitor MODULE=test_link_monitor
 
-# Wave viewer
-waves:
-	gtkwave dump.vcd &
+test_comm_top:
+	$(MAKE) TOPLEVEL=comm_controller_top MODULE=test_comm_controller
