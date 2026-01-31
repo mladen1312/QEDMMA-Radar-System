@@ -1,5 +1,6 @@
 # QEDMMA DDC Core Register Map
-# Radar Systems Architect v9.0 - Forge Spec
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 # SSOT - Single Source of Truth for auto-generation
 
 module:
@@ -47,16 +48,6 @@ registers:
         bits: [31, 0]
         description: "Upper 32 bits of NCO frequency word"
 
-  - name: NCO_PHASE
-    offset: 0x0C
-    description: "NCO Phase Offset"
-    access: RW
-    reset: 0x00000000
-    fields:
-      - name: PHASE_OFFSET
-        bits: [31, 0]
-        description: "Phase offset for NCO (radians * 2^32 / 2π)"
-
   - name: CIC_CONFIG
     offset: 0x10
     description: "CIC Filter Configuration"
@@ -69,19 +60,6 @@ registers:
       - name: STAGES
         bits: [11, 8]
         description: "Number of CIC stages (1-6)"
-
-  - name: GAIN
-    offset: 0x14
-    description: "Output Gain Control"
-    access: RW
-    reset: 0x00008000
-    fields:
-      - name: GAIN_I
-        bits: [15, 0]
-        description: "I channel gain (1.15 fixed point)"
-      - name: GAIN_Q
-        bits: [31, 16]
-        description: "Q channel gain (1.15 fixed point)"
 
   - name: STATUS
     offset: 0x20
@@ -98,39 +76,6 @@ registers:
       - name: OVERFLOW_Q
         bits: [2]
         description: "Q channel overflow detected"
-      - name: CIC_SETTLING
-        bits: [3]
-        description: "CIC filter still settling"
-
-  - name: SAMPLE_CNT_L
-    offset: 0x24
-    description: "Input Sample Counter [31:0]"
-    access: RO
-    reset: 0x00000000
-    fields:
-      - name: COUNT_L
-        bits: [31, 0]
-        description: "Lower 32 bits of sample count"
-
-  - name: SAMPLE_CNT_H
-    offset: 0x28
-    description: "Input Sample Counter [63:32]"
-    access: RO
-    reset: 0x00000000
-    fields:
-      - name: COUNT_H
-        bits: [31, 0]
-        description: "Upper 32 bits of sample count"
-
-  - name: OUTPUT_CNT_L
-    offset: 0x2C
-    description: "Output Sample Counter [31:0]"
-    access: RO
-    reset: 0x00000000
-    fields:
-      - name: COUNT_L
-        bits: [31, 0]
-        description: "Lower 32 bits of output count"
 
   - name: VERSION
     offset: 0x3C
@@ -147,6 +92,3 @@ registers:
       - name: MAJOR
         bits: [23, 16]
         description: "Major version"
-      - name: ID
-        bits: [31, 24]
-        description: "Module ID (0x01 = DDC)"
