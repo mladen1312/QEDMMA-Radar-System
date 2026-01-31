@@ -1,0 +1,35 @@
+# Build outputs
+*.o
+*.bit
+*.bin
+*.elf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vivado
+*.jou
+*.log
+.Xil/
+
+# Temporary
+*.tmp
+*.bak
+docs/node_modules/
+docs/node_modules/
