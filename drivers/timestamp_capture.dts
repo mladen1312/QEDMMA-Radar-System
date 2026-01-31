@@ -1,0 +1,30 @@
+/*
+ * Device Tree Overlay for timestamp_capture
+ *
+ * Auto-generated from YAML - DO NOT EDIT MANUALLY
+ * Generator: QEDMMA Forge v9.0
+ * Generated: 2026-01-31 11:17:23
+ * Version: 1.0.0
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "xlnx,zynqmp";
+
+    fragment@0 {
+        target = <&amba>;
+        __overlay__ {
+            timestamp_capture: timestamp_capture@80000000 {
+                compatible = "qedmma,timestamp_capture";
+                reg = <0x0 0x80000000 0x0 0x1000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 89 4>;
+                clocks = <&zynqmp_clk 71>, <&zynqmp_clk 72>;
+                clock-names = "axi_clk", "ts_clk";
+                status = "okay";
+            };
+        };
+    };
+};
