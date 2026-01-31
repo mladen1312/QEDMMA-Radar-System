@@ -1,6 +1,7 @@
 //==============================================================================
 // QEDMMA IMM (Interacting Multiple Model) Tracker
-// Radar Systems Architect v9.0 - Forge Spec
+// Author: Dr. Mladen Mešter
+// Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 //
 // Description:
 //   Implements IMM filter with 3 motion models for robust target tracking:
@@ -8,7 +9,6 @@
 //   - CA (Constant Acceleration)  
 //   - CT (Coordinated Turn)
 //
-// Features:
 //   - 9-state tracking (position, velocity, acceleration)
 //   - Model probability adaptation
 //   - Covariance intersection for track fusion
