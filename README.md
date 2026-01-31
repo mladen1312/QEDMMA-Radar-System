@@ -59,8 +59,8 @@ QEDMMA-Radar-System/
 ├── scripts/                          # Build & Generation Scripts
 │   └── gen_regs.py                   # YAML → RTL/C/Python generator
 │
-├── ci/                               # CI/CD Configuration
-│   └── .gitlab-ci.yml
+├── constraints/                      # FPGA Constraints
+│   └── timing_zu47dr.xdc             # Timing for ZU47DR RFSoC
 │
 └── .github/workflows/                # GitHub Actions
     └── ci-cd.yml                     # Lint → Sim → Synth pipeline
@@ -85,14 +85,14 @@ QEDMMA-Radar-System/
 
 ### RTL Modules
 
-| Module | LOC | Function | Requirements |
-|--------|-----|----------|--------------|
-| `timestamp_capture.sv` | 860 | Sub-ns PPS timestamping | [REQ-TS-001..004] |
-| `ddc_core.sv` | 282 | NCO + Mixer + CIC filter | [REQ-DDC-001..004] |
-| `cross_correlator.sv` | 376 | FFT correlation + TDOA | [REQ-CORR-001..004] |
-| `cs_encoder.sv` | 263 | Compressed sensing | [REQ-CS-001..004] |
-| `qedmma_rx_top.sv` | 261 | Top-level integration | [REQ-TOP-001..004] |
-| **Total** | **2,042** | | |
+| Module | LOC | Function |
+|--------|-----|----------|
+| `timestamp_capture.sv` | 860 | Sub-ns PPS timestamping |
+| `ddc_core.sv` | 282 | NCO + Mixer + CIC filter |
+| `cross_correlator.sv` | 376 | FFT correlation + TDOA |
+| `cs_encoder.sv` | 263 | Compressed sensing |
+| `qedmma_rx_top.sv` | 261 | Top-level integration |
+| **Total** | **2,042** | |
 
 ---
 
@@ -123,11 +123,12 @@ verilator --lint-only -Wall rtl/*.sv
 python scripts/gen_regs.py
 ```
 
-### Vivado Synthesis (requires license)
+### Vivado Synthesis
 
 ```bash
-cd scripts
-vivado -mode batch -source vivado_synth.tcl
+cd scripts/vivado
+vivado -mode batch -source create_project.tcl
+vivado -mode batch -source run_synthesis.tcl
 ```
 
 ---
@@ -167,23 +168,21 @@ GitHub Actions automatically runs on every push:
 3. **Synthesis Check** - Yosys open-source synth
 4. **Driver Build** - CMake compilation
 
-[![View Actions](https://img.shields.io/badge/View-GitHub_Actions-blue?logo=github)](https://github.com/mladen1312/QEDMMA-Radar-System/actions)
-
 ---
 
 ## 📚 Documentation
 
-- [System Architecture v1.3](docs/QEDMMA_System_Architecture_v1.3.docx) - Full technical specification
-- [Technical Appendix](docs/QEDMMA_Technical_Appendix_v1.3.md) - Algorithms & math
-- [BOM v1.3](docs/QEDMMA_BOM_v1.3.xlsx) - Bill of Materials
-- [Architecture Diagrams](docs/QEDMMA_Architecture_Diagrams.md) - Mermaid diagrams
+- [System Architecture v1.3](docs/QEDMMA_System_Architecture_v1.3.docx)
+- [Technical Appendix](docs/QEDMMA_Technical_Appendix_v1.3.md)
+- [BOM v1.3](docs/QEDMMA_BOM_v1.3.xlsx)
+- [Architecture Diagrams](docs/QEDMMA_Architecture_Diagrams.md)
 
 ---
 
 ## 👤 Author
 
 **Dr. Mladen Mešter**  
-Principal Investigator & System Architect
+Zagreb, Croatia
 
 ---
 
@@ -200,4 +199,5 @@ Proprietary - All Rights Reserved
 
 ---
 
-*Zagreb, Croatia - January 2026*
+*QEDMMA Radar System v1.3*  
+*January 2026*
