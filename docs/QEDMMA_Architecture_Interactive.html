@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QEDMMA System Architecture v1.3</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid #3a86ff;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #3a86ff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(58, 134, 255, 0.5);
+        }
+        .subtitle {
+            font-size: 1.2em;
+            color: #8ecae6;
+        }
+        .version-badge {
+            display: inline-block;
+            background: #ff006e;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .kpi-card {
+            background: rgba(58, 134, 255, 0.1);
+            border: 1px solid #3a86ff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .kpi-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3a86ff;
+        }
+        .kpi-label {
+            font-size: 0.9em;
+            color: #8ecae6;
+            margin-top: 5px;
+        }
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        h2 {
+            color: #8ecae6;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3a86ff;
+        }
+        h3 {
+            color: #ffbe0b;
+            margin: 20px 0 15px 0;
+        }
+        .mermaid {
+            background: #0d1b2a;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid #3a86ff;
+        }
+        th {
+            background: #1a4b8c;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background: rgba(58, 134, 255, 0.1);
+        }
+        .highlight {
+            background: rgba(255, 190, 11, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ffbe0b;
+        }
+        .formula {
+            background: #0d1b2a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            border-left: 4px solid #3a86ff;
+        }
+        .status-green { color: #06d6a0; }
+        .status-yellow { color: #ffbe0b; }
+        .status-red { color: #ff006e; }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+        .architecture-box {
+            border: 2px solid #3a86ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(58, 134, 255, 0.05);
+        }
+        .arch-title {
+            font-weight: bold;
+            color: #3a86ff;
+            margin-bottom: 10px;
+        }
+        .component-list {
+            list-style: none;
+            padding-left: 20px;
+        }
+        .component-list li::before {
+            content: "▸ ";
+            color: #ffbe0b;
+        }
+        .equation {
+            text-align: center;
+            font-size: 1.2em;
+            padding: 20px;
+            background: linear-gradient(90deg, rgba(58,134,255,0.1), transparent);
+            border-left: 4px solid #3a86ff;
+            margin: 15px 0;
+        }
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            border-top: 1px solid #333;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 QEDMMA</h1>
+            <div class="subtitle">Quantum-Enhanced Distributed Metamaterial Multistatic Array</div>
+            <div class="subtitle" style="margin-top: 10px;">Anti-Stealth Detection & Precision Weapon Guidance System</div>
+            <div class="version-badge">Version 1.3 "Reality Check"</div>
+        </header>
+
+        <!-- KPI Dashboard -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-value">&gt;150 km</div>
+                <div class="kpi-label">Detection Range (RCS 0.01 m²)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">&lt;500 m</div>
+                <div class="kpi-label">Localization CEP</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">50+</div>
+                <div class="kpi-label">Simultaneous Tracks</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">&lt;100 ms</div>
+                <div class="kpi-label">Datalink Latency</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">500 nV/m/√Hz</div>
+                <div class="kpi-label">Rydberg Sensitivity</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">€752k</div>
+                <div class="kpi-label">Phase I Budget</div>
+            </div>
+        </div>
+
+        <!-- Problem Statement -->
+        <div class="section">
+            <h2>🎖️ The Stealth Problem</h2>
+            <p>Modern stealth aircraft (F-22, F-35, B-21) have Radar Cross Sections as low as <span class="highlight">0.0001 m²</span> at X-band frequencies - equivalent to a 1 cm metal sphere. This renders conventional radars ineffective.</p>
+            
+            <h3>Why Conventional Radars Fail</h3>
+            <div class="equation">
+                R<sub>max</sub> ∝ σ<sup>1/4</sup> → 40 dB RCS reduction = 100× range reduction
+            </div>
+            <p>A radar detecting conventional aircraft at 400 km sees stealth at only <span class="highlight">4 km</span> - too late for engagement.</p>
+
+            <h3>QEDMMA Exploits Three Stealth Weaknesses</h3>
+            <table>
+                <tr>
+                    <th>Weakness</th>
+                    <th>Physical Reason</th>
+                    <th>QEDMMA Solution</th>
+                </tr>
+                <tr>
+                    <td>Frequency</td>
+                    <td>RAM doesn't work at VHF (&lt;300 MHz)</td>
+                    <td>We operate at 100-200 MHz</td>
+                </tr>
+                <tr>
+                    <td>Aspect Angle</td>
+                    <td>Optimized only for frontal RCS</td>
+                    <td>Bistatic geometry exposes weakness</td>
+                </tr>
+                <tr>
+                    <td>Monostatic</td>
+                    <td>Shaped for return to transmitter</td>
+                    <td>Our receiver is elsewhere</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Core Technologies -->
+        <div class="section">
+            <h2>⚡ Core Technologies</h2>
+            <div class="two-column">
+                <div class="architecture-box">
+                    <div class="arch-title">🔬 Rydberg Quantum Sensor</div>
+                    <ul class="component-list">
+                        <li>EIT in Rb-85 vapor cell</li>
+                        <li>780nm probe + 480nm coupling lasers</li>
+                        <li>Direct RF E-field measurement</li>
+                        <li>Sensitivity: 500 nV/m/√Hz</li>
+                        <li>Bandwidth: 20-60 MHz per cell</li>
+                        <li>No thermal noise floor limitation</li>
+                    </ul>
+                </div>
+                <div class="architecture-box">
+                    <div class="arch-title">📡 Bistatic VHF Geometry</div>
+                    <ul class="component-list">
+                        <li>Tx/Rx separation exploits RCS angle dependence</li>
+                        <li>VHF resonance with aircraft structure</li>
+                        <li>RCS enhancement: +15-30 dB vs monostatic X-band</li>
+                        <li>Forward scatter gain at β > 150°</li>
+                        <li>Stealth becomes "normal" RCS target</li>
+                    </ul>
+                </div>
+                <div class="architecture-box">
+                    <div class="arch-title">🛰️ TDOA Geolocation</div>
+                    <ul class="component-list">
+                        <li>4+ distributed receiver nodes</li>
+                        <li>White Rabbit timing (&lt;1 ns sync)</li>
+                        <li>CSAC holdover (&lt;5 µs/4h)</li>
+                        <li>Chan-Ho closed-form solver</li>
+                        <li>Hyperbolic intersection</li>
+                        <li>Position accuracy: &lt;500 m CEP</li>
+                    </ul>
+                </div>
+                <div class="architecture-box">
+                    <div class="arch-title">🧠 AI-Enhanced Tracking</div>
+                    <ul class="component-list">
+                        <li>GPU-accelerated correlation (A100)</li>
+                        <li>IMM filter (CV/CA/CT models)</li>
+                        <li>JPDA data association</li>
+                        <li>50+ simultaneous tracks</li>
+                        <li>Maneuvering target support</li>
+                        <li>Real-time classification (CNN)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Architecture Diagram -->
+        <div class="section">
+            <h2>🏗️ System Architecture</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph TX["📡 TX NODE"]
+        WG[Waveform Gen<br/>PRBS-15]
+        PA[GaN PA 10kW]
+        LPDA[LPDA Antenna]
+        WG --> PA --> LPDA
+    end
+    
+    subgraph TARGET["✈️ STEALTH TARGET"]
+        ST[F-22/F-35/B-21<br/>σ_VHF ≈ 1 m²]
+    end
+    
+    subgraph RX["🔬 RX NODES (×4)"]
+        RX1[RX1: Rydberg + RFSoC]
+        RX2[RX2: Rydberg + RFSoC]
+        RX3[RX3: Rydberg + RFSoC]
+        RX4[RX4: Rydberg + RFSoC]
+    end
+    
+    subgraph C2["🖥️ C2 CENTER"]
+        CORR[Correlation<br/>GPU A100]
+        TDOA[TDOA Solver]
+        TRACK[IMM Tracker]
+        WGI[Weapon Interface]
+        CORR --> TDOA --> TRACK --> WGI
+    end
+    
+    subgraph WPN["🚀 WEAPONS"]
+        SAM[SAM System]
+    end
+    
+    LPDA ==>|"VHF 100-200 MHz"| ST
+    ST ==>|"Bistatic Scatter"| RX1 & RX2 & RX3 & RX4
+    RX1 & RX2 & RX3 & RX4 -->|"25 GbE"| CORR
+    WGI -->|"UDP 10 Hz"| SAM
+            </div>
+        </div>
+
+        <!-- Signal Processing -->
+        <div class="section">
+            <h2>📊 Signal Processing Chain</h2>
+            <div class="mermaid">
+flowchart LR
+    A[Rydberg<br/>Sensor] --> B[ADC<br/>5 GSPS]
+    B --> C[DDC +<br/>Filter]
+    C --> D[Decimate<br/>×20]
+    D --> E[Cross-<br/>Correlation]
+    E --> F[TDOA<br/>Extract]
+    F --> G[Chan-Ho<br/>Solver]
+    G --> H[IMM<br/>Filter]
+    H --> I[Track<br/>Output]
+            </div>
+            
+            <h3>Key Algorithms</h3>
+            <div class="formula">
+TDOA: Δt_ij = (r_i - r_j) / c → Hyperbola with foci at Rx_i, Rx_j
+<br><br>
+Chan-Ho: θ = (G'WG)⁻¹ G'W h → Closed-form position estimate
+<br><br>
+EKF: x̂_k = x̂_k|k-1 + K(z_k - Hx̂_k|k-1) → Recursive state estimation
+            </div>
+        </div>
+
+        <!-- Weapon Guidance -->
+        <div class="section">
+            <h2>🚀 Weapon Guidance Interface</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant C2 as C2 Fusion
+    participant WS as Weapon System
+    participant MSL as Missile
+    
+    C2->>WS: TRACK_UPDATE (1 Hz)
+    WS->>C2: WEAPON_READY
+    C2->>WS: HANDOFF_REQUEST
+    WS->>MSL: LAUNCH
+    loop Midcourse (5-10 Hz)
+        C2->>WS: TRACK_UPDATE + PIP
+        WS->>MSL: GUIDANCE_CMD
+    end
+    MSL->>WS: SEEKER_LOCK
+    MSL->>MSL: INTERCEPT
+            </div>
+            
+            <h3>Guidance Modes</h3>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Update Rate</th>
+                    <th>Accuracy Required</th>
+                </tr>
+                <tr>
+                    <td>Acquisition</td>
+                    <td>1 Hz</td>
+                    <td>&lt; 5 km CEP</td>
+                </tr>
+                <tr>
+                    <td>Midcourse</td>
+                    <td>5 Hz</td>
+                    <td>&lt; 1 km CEP</td>
+                </tr>
+                <tr>
+                    <td>Terminal</td>
+                    <td>10 Hz</td>
+                    <td>&lt; 100 m CEP</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- BOM Summary -->
+        <div class="section">
+            <h2>💰 Budget Summary (Phase I)</h2>
+            <table>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit Cost</th>
+                    <th>Total</th>
+                </tr>
+                <tr>
+                    <td>Rx Quantum Nodes</td>
+                    <td>2</td>
+                    <td>€164,500</td>
+                    <td>€329,000</td>
+                </tr>
+                <tr>
+                    <td>Tx Illuminator (5kW VHF)</td>
+                    <td>1</td>
+                    <td>€60,000</td>
+                    <td>€60,000</td>
+                </tr>
+                <tr>
+                    <td>C2 Fusion Server</td>
+                    <td>1</td>
+                    <td>€25,000</td>
+                    <td>€25,000</td>
+                </tr>
+                <tr>
+                    <td>Field Testing Logistics</td>
+                    <td>1</td>
+                    <td>€50,000</td>
+                    <td>€50,000</td>
+                </tr>
+                <tr>
+                    <td>R&D Labor (12 months)</td>
+                    <td>4 eng</td>
+                    <td>€6,000/mo</td>
+                    <td>€288,000</td>
+                </tr>
+                <tr style="background: #1a4b8c; font-weight: bold;">
+                    <td colspan="3">TOTAL INVESTMENT</td>
+                    <td>€752,000</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Status -->
+        <div class="section">
+            <h2>📋 Development Status</h2>
+            <table>
+                <tr>
+                    <th>Aspect</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    <td>Physics Model</td>
+                    <td class="status-green">✓ GREEN</td>
+                    <td>Bistatic RCS + VHF resonance validated</td>
+                </tr>
+                <tr>
+                    <td>TDOA Algorithm</td>
+                    <td class="status-green">✓ GREEN</td>
+                    <td>Chan-Ho + IMM implemented</td>
+                </tr>
+                <tr>
+                    <td>FPGA Design</td>
+                    <td class="status-green">✓ GREEN</td>
+                    <td>ZU47DR resource fit verified</td>
+                </tr>
+                <tr>
+                    <td>Rydberg TRL</td>
+                    <td class="status-yellow">⚠ YELLOW</td>
+                    <td>TRL 3-4, lab validation needed</td>
+                </tr>
+                <tr>
+                    <td>Metamaterial Antenna</td>
+                    <td class="status-yellow">⚠ YELLOW</td>
+                    <td>Design complete, fabrication pending</td>
+                </tr>
+                <tr>
+                    <td>Supply Chain</td>
+                    <td class="status-yellow">⚠ YELLOW</td>
+                    <td>Long lead times (Toptica, Xilinx)</td>
+                </tr>
+            </table>
+        </div>
+
+        <footer>
+            <p>QEDMMA System Architecture Document v1.3 | PROPRIETARY - EXPORT CONTROLLED</p>
+            <p>Prepared for Dr. Mladen Mešter | January 31, 2026</p>
+            <p>Radar Systems Architect v9.0 - Forge Spec</p>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#3a86ff',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#3a86ff',
+                lineColor: '#8ecae6',
+                secondaryColor: '#1a4b8c',
+                tertiaryColor: '#0d1b2a'
+            }
+        });
+    </script>
+</body>
+</html>
