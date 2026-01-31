@@ -1,0 +1,152 @@
+# QEDMMA DDC Core Register Map
+# Radar Systems Architect v9.0 - Forge Spec
+# SSOT - Single Source of Truth for auto-generation
+
+module:
+  name: ddc_core
+  description: "Digital Down Converter register interface"
+  version: "1.0"
+  base_address: 0x00010000
+  address_width: 12
+  data_width: 32
+
+registers:
+  - name: CTRL
+    offset: 0x00
+    description: "DDC Control Register"
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: ENABLE
+        bits: [0]
+        description: "DDC enable (1=run, 0=stop)"
+      - name: BYPASS_CIC
+        bits: [1]
+        description: "Bypass CIC filter (1=bypass, 0=filter)"
+      - name: SOFT_RESET
+        bits: [31]
+        description: "Software reset (self-clearing)"
+
+  - name: NCO_FREQ_L
+    offset: 0x04
+    description: "NCO Frequency Word [31:0]"
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: FREQ_WORD_L
+        bits: [31, 0]
+        description: "Lower 32 bits of NCO frequency word"
+
+  - name: NCO_FREQ_H
+    offset: 0x08
+    description: "NCO Frequency Word [63:32] (if 64-bit NCO)"
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: FREQ_WORD_H
+        bits: [31, 0]
+        description: "Upper 32 bits of NCO frequency word"
+
+  - name: NCO_PHASE
+    offset: 0x0C
+    description: "NCO Phase Offset"
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: PHASE_OFFSET
+        bits: [31, 0]
+        description: "Phase offset for NCO (radians * 2^32 / 2π)"
+
+  - name: CIC_CONFIG
+    offset: 0x10
+    description: "CIC Filter Configuration"
+    access: RW
+    reset: 0x00000004
+    fields:
+      - name: DECIMATION
+        bits: [5, 0]
+        description: "Decimation factor (4-64)"
+      - name: STAGES
+        bits: [11, 8]
+        description: "Number of CIC stages (1-6)"
+
+  - name: GAIN
+    offset: 0x14
+    description: "Output Gain Control"
+    access: RW
+    reset: 0x00008000
+    fields:
+      - name: GAIN_I
+        bits: [15, 0]
+        description: "I channel gain (1.15 fixed point)"
+      - name: GAIN_Q
+        bits: [31, 16]
+        description: "Q channel gain (1.15 fixed point)"
+
+  - name: STATUS
+    offset: 0x20
+    description: "DDC Status Register"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: RUNNING
+        bits: [0]
+        description: "DDC is running"
+      - name: OVERFLOW_I
+        bits: [1]
+        description: "I channel overflow detected"
+      - name: OVERFLOW_Q
+        bits: [2]
+        description: "Q channel overflow detected"
+      - name: CIC_SETTLING
+        bits: [3]
+        description: "CIC filter still settling"
+
+  - name: SAMPLE_CNT_L
+    offset: 0x24
+    description: "Input Sample Counter [31:0]"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT_L
+        bits: [31, 0]
+        description: "Lower 32 bits of sample count"
+
+  - name: SAMPLE_CNT_H
+    offset: 0x28
+    description: "Input Sample Counter [63:32]"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT_H
+        bits: [31, 0]
+        description: "Upper 32 bits of sample count"
+
+  - name: OUTPUT_CNT_L
+    offset: 0x2C
+    description: "Output Sample Counter [31:0]"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT_L
+        bits: [31, 0]
+        description: "Lower 32 bits of output count"
+
+  - name: VERSION
+    offset: 0x3C
+    description: "IP Version Register"
+    access: RO
+    reset: 0x01000000
+    fields:
+      - name: PATCH
+        bits: [7, 0]
+        description: "Patch version"
+      - name: MINOR
+        bits: [15, 8]
+        description: "Minor version"
+      - name: MAJOR
+        bits: [23, 16]
+        description: "Major version"
+      - name: ID
+        bits: [31, 24]
+        description: "Module ID (0x01 = DDC)"
