@@ -1,0 +1,573 @@
+# =============================================================================
+# QEDMMA Timestamp Capture Unit - Register Definition (SSOT)
+# Version: 1.0.0
+# Author: Radar Systems Architect v9.0
+# Date: 2026-01-31
+# 
+# This YAML serves as Single Source of Truth for:
+#   - RTL register package generation (.sv)
+#   - C header generation (.h)
+#   - Python driver generation (.py)
+#   - Device Tree overlay generation (.dts)
+#   - Documentation generation (.md)
+# =============================================================================
+
+module:
+  name: timestamp_capture
+  version: "1.0.0"
+  description: "Sub-nanosecond timestamp capture unit for QEDMMA TDOA processing"
+  vendor: "QEDMMA"
+  bus: "AXI4-Lite"
+  addr_width: 12
+  data_width: 32
+  
+  # Clock domains
+  clocks:
+    - name: axi_clk
+      frequency: 100_000_000
+      description: "AXI bus clock"
+    - name: ts_clk
+      frequency: 250_000_000
+      description: "Timestamp counter clock (4ns resolution)"
+    - name: wr_clk
+      frequency: 125_000_000
+      description: "White Rabbit recovered clock"
+
+  # Reset signals
+  resets:
+    - name: axi_rstn
+      active_low: true
+      async: false
+    - name: ts_rstn
+      active_low: true
+      async: true
+
+  # Interrupts
+  interrupts:
+    - name: ts_irq
+      description: "Timestamp capture interrupt"
+      trigger: level_high
+
+  # ==========================================================================
+  # REGISTER DEFINITIONS
+  # ==========================================================================
+  registers:
+    # --------------------------------------------------------------------------
+    # Control/Status Registers (0x000 - 0x0FF)
+    # --------------------------------------------------------------------------
+    - name: CTRL
+      offset: 0x000
+      access: RW
+      reset: 0x00000000
+      description: "Main control register"
+      fields:
+        - name: ENABLE
+          bits: [0]
+          access: RW
+          reset: 0
+          description: "Global enable for timestamp capture"
+        - name: SYNC_SRC
+          bits: [2:1]
+          access: RW
+          reset: 0
+          enum:
+            - name: WHITE_RABBIT
+              value: 0
+              description: "Use White Rabbit PPS"
+            - name: CSAC
+              value: 1
+              description: "Use CSAC PPS"
+            - name: EXTERNAL
+              value: 2
+              description: "Use external PPS input"
+            - name: FREERUN
+              value: 3
+              description: "Free-running mode (no sync)"
+          description: "PPS synchronization source select"
+        - name: ARM_MODE
+          bits: [4:3]
+          access: RW
+          reset: 0
+          enum:
+            - name: CONTINUOUS
+              value: 0
+              description: "Capture continuously"
+            - name: SINGLE
+              value: 1
+              description: "Single capture, then disarm"
+            - name: TRIGGERED
+              value: 2
+              description: "Wait for software trigger"
+            - name: GATED
+              value: 3
+              description: "Gate by external signal"
+          description: "Capture arm mode"
+        - name: CH_EN
+          bits: [11:8]
+          access: RW
+          reset: 0xF
+          description: "Per-channel enable bits [CH3:CH0]"
+        - name: FIFO_CLR
+          bits: [16]
+          access: W1C
+          reset: 0
+          description: "Write 1 to clear all FIFOs"
+        - name: SOFT_TRIG
+          bits: [24]
+          access: W1S
+          reset: 0
+          description: "Software trigger (self-clearing)"
+        - name: SOFT_RST
+          bits: [31]
+          access: W1S
+          reset: 0
+          description: "Software reset (self-clearing)"
+
+    - name: STATUS
+      offset: 0x004
+      access: RO
+      reset: 0x00000000
+      description: "Status register"
+      fields:
+        - name: LOCKED
+          bits: [0]
+          access: RO
+          description: "PPS lock status (1=locked)"
+        - name: HOLDOVER
+          bits: [1]
+          access: RO
+          description: "Holdover mode active"
+        - name: SYNC_SRC_ACT
+          bits: [3:2]
+          access: RO
+          description: "Active sync source (mirrors CTRL.SYNC_SRC when locked)"
+        - name: FIFO_EMPTY
+          bits: [11:8]
+          access: RO
+          description: "Per-channel FIFO empty flags"
+        - name: FIFO_FULL
+          bits: [15:12]
+          access: RO
+          description: "Per-channel FIFO full flags"
+        - name: FIFO_OVERFLOW
+          bits: [19:16]
+          access: RO
+          description: "Per-channel FIFO overflow (sticky)"
+        - name: PPS_COUNT
+          bits: [31:24]
+          access: RO
+          description: "PPS pulse counter (rolls over at 256)"
+
+    - name: IRQ_EN
+      offset: 0x008
+      access: RW
+      reset: 0x00000000
+      description: "Interrupt enable register"
+      fields:
+        - name: CAPTURE_EN
+          bits: [3:0]
+          access: RW
+          reset: 0
+          description: "Per-channel capture interrupt enable"
+        - name: FIFO_THRESH_EN
+          bits: [7:4]
+          access: RW
+          reset: 0
+          description: "Per-channel FIFO threshold interrupt enable"
+        - name: OVERFLOW_EN
+          bits: [11:8]
+          access: RW
+          reset: 0
+          description: "Per-channel overflow interrupt enable"
+        - name: PPS_EN
+          bits: [16]
+          access: RW
+          reset: 0
+          description: "PPS event interrupt enable"
+        - name: LOCK_CHANGE_EN
+          bits: [17]
+          access: RW
+          reset: 0
+          description: "Lock status change interrupt enable"
+
+    - name: IRQ_STATUS
+      offset: 0x00C
+      access: W1C
+      reset: 0x00000000
+      description: "Interrupt status register (write 1 to clear)"
+      fields:
+        - name: CAPTURE
+          bits: [3:0]
+          access: W1C
+          description: "Per-channel capture event"
+        - name: FIFO_THRESH
+          bits: [7:4]
+          access: W1C
+          description: "Per-channel FIFO threshold reached"
+        - name: OVERFLOW
+          bits: [11:8]
+          access: W1C
+          description: "Per-channel FIFO overflow"
+        - name: PPS
+          bits: [16]
+          access: W1C
+          description: "PPS event occurred"
+        - name: LOCK_CHANGE
+          bits: [17]
+          access: W1C
+          description: "Lock status changed"
+
+    # --------------------------------------------------------------------------
+    # Timestamp Counter Registers (0x100 - 0x1FF)
+    # --------------------------------------------------------------------------
+    - name: TS_SEC_LO
+      offset: 0x100
+      access: RO
+      reset: 0x00000000
+      description: "Timestamp seconds counter [31:0]"
+      fields:
+        - name: VALUE
+          bits: [31:0]
+          access: RO
+          description: "Lower 32 bits of seconds counter"
+
+    - name: TS_SEC_HI
+      offset: 0x104
+      access: RO
+      reset: 0x00000000
+      description: "Timestamp seconds counter [47:32]"
+      fields:
+        - name: VALUE
+          bits: [15:0]
+          access: RO
+          description: "Upper 16 bits of seconds counter"
+        - name: RESERVED
+          bits: [31:16]
+          access: RO
+          description: "Reserved"
+
+    - name: TS_NS
+      offset: 0x108
+      access: RO
+      reset: 0x00000000
+      description: "Timestamp nanoseconds within second"
+      fields:
+        - name: VALUE
+          bits: [29:0]
+          access: RO
+          description: "Nanoseconds [0-999,999,999]"
+        - name: RESERVED
+          bits: [31:30]
+          access: RO
+          description: "Reserved"
+
+    - name: TS_FRAC
+      offset: 0x10C
+      access: RO
+      reset: 0x00000000
+      description: "Sub-nanosecond fractional timestamp (TDC)"
+      fields:
+        - name: VALUE
+          bits: [15:0]
+          access: RO
+          description: "Fractional ns (1/65536 ns resolution)"
+        - name: VALID
+          bits: [31]
+          access: RO
+          description: "TDC measurement valid"
+
+    - name: TS_LATCH_CTRL
+      offset: 0x110
+      access: RW
+      reset: 0x00000000
+      description: "Timestamp latch control"
+      fields:
+        - name: LATCH
+          bits: [0]
+          access: W1S
+          description: "Write 1 to latch current time"
+        - name: AUTO_LATCH
+          bits: [1]
+          access: RW
+          reset: 0
+          description: "Auto-latch on PPS"
+
+    # --------------------------------------------------------------------------
+    # Channel 0-3 Capture Registers (0x200 - 0x2FF)
+    # --------------------------------------------------------------------------
+    - name: CH0_CTRL
+      offset: 0x200
+      access: RW
+      reset: 0x00000001
+      description: "Channel 0 control"
+      fields:
+        - name: EDGE_SEL
+          bits: [0]
+          access: RW
+          reset: 1
+          enum:
+            - name: RISING
+              value: 0
+            - name: FALLING
+              value: 1
+          description: "Capture edge select"
+        - name: FILTER_EN
+          bits: [1]
+          access: RW
+          reset: 0
+          description: "Enable glitch filter"
+        - name: FILTER_LEN
+          bits: [7:4]
+          access: RW
+          reset: 2
+          description: "Filter length (2^N cycles)"
+        - name: FIFO_THRESH
+          bits: [15:8]
+          access: RW
+          reset: 128
+          description: "FIFO threshold for interrupt"
+
+    - name: CH0_TS_SEC
+      offset: 0x204
+      access: RO
+      description: "Channel 0 captured seconds (FIFO read)"
+      fields:
+        - name: VALUE
+          bits: [31:0]
+          access: RO
+          description: "Captured seconds [31:0]"
+
+    - name: CH0_TS_NS
+      offset: 0x208
+      access: RO
+      description: "Channel 0 captured nanoseconds (FIFO read)"
+      fields:
+        - name: VALUE
+          bits: [29:0]
+          access: RO
+          description: "Captured nanoseconds"
+        - name: RESERVED
+          bits: [31:30]
+          access: RO
+
+    - name: CH0_TS_FRAC
+      offset: 0x20C
+      access: RO
+      description: "Channel 0 captured fractional ns (FIFO read)"
+      fields:
+        - name: VALUE
+          bits: [15:0]
+          access: RO
+          description: "Fractional nanoseconds"
+        - name: FIFO_COUNT
+          bits: [27:16]
+          access: RO
+          description: "Current FIFO fill level"
+        - name: VALID
+          bits: [31]
+          access: RO
+          description: "Valid data in FIFO"
+
+    # Channels 1-3 follow same pattern at offsets 0x210, 0x220, 0x230
+    - name: CH1_CTRL
+      offset: 0x210
+      access: RW
+      reset: 0x00000001
+      description: "Channel 1 control (same fields as CH0)"
+      inherit: CH0_CTRL
+
+    - name: CH1_TS_SEC
+      offset: 0x214
+      access: RO
+      inherit: CH0_TS_SEC
+
+    - name: CH1_TS_NS
+      offset: 0x218
+      access: RO
+      inherit: CH0_TS_NS
+
+    - name: CH1_TS_FRAC
+      offset: 0x21C
+      access: RO
+      inherit: CH0_TS_FRAC
+
+    - name: CH2_CTRL
+      offset: 0x220
+      access: RW
+      reset: 0x00000001
+      inherit: CH0_CTRL
+
+    - name: CH2_TS_SEC
+      offset: 0x224
+      access: RO
+      inherit: CH0_TS_SEC
+
+    - name: CH2_TS_NS
+      offset: 0x228
+      access: RO
+      inherit: CH0_TS_NS
+
+    - name: CH2_TS_FRAC
+      offset: 0x22C
+      access: RO
+      inherit: CH0_TS_FRAC
+
+    - name: CH3_CTRL
+      offset: 0x230
+      access: RW
+      reset: 0x00000001
+      inherit: CH0_CTRL
+
+    - name: CH3_TS_SEC
+      offset: 0x234
+      access: RO
+      inherit: CH0_TS_SEC
+
+    - name: CH3_TS_NS
+      offset: 0x238
+      access: RO
+      inherit: CH0_TS_NS
+
+    - name: CH3_TS_FRAC
+      offset: 0x23C
+      access: RO
+      inherit: CH0_TS_FRAC
+
+    # --------------------------------------------------------------------------
+    # Calibration Registers (0x300 - 0x3FF)
+    # --------------------------------------------------------------------------
+    - name: CAL_CTRL
+      offset: 0x300
+      access: RW
+      reset: 0x00000000
+      description: "Calibration control"
+      fields:
+        - name: CAL_EN
+          bits: [0]
+          access: RW
+          description: "Enable calibration mode"
+        - name: CAL_SRC
+          bits: [2:1]
+          access: RW
+          enum:
+            - name: INTERNAL
+              value: 0
+              description: "Internal loopback"
+            - name: EXTERNAL
+              value: 1
+              description: "External calibration pulse"
+            - name: PPS
+              value: 2
+              description: "Use PPS for calibration"
+          description: "Calibration source"
+        - name: CAL_START
+          bits: [8]
+          access: W1S
+          description: "Start calibration sequence"
+        - name: CAL_BUSY
+          bits: [16]
+          access: RO
+          description: "Calibration in progress"
+        - name: CAL_DONE
+          bits: [17]
+          access: RO
+          description: "Calibration complete"
+        - name: CAL_ERROR
+          bits: [18]
+          access: RO
+          description: "Calibration error"
+
+    - name: CAL_OFFSET
+      offset: 0x304
+      access: RW
+      reset: 0x00000000
+      description: "Calibration offset (signed, in TDC units)"
+      fields:
+        - name: VALUE
+          bits: [15:0]
+          access: RW
+          description: "Offset value (signed 16-bit)"
+        - name: AUTO_APPLY
+          bits: [31]
+          access: RW
+          description: "Automatically apply offset to captures"
+
+    - name: CAL_SKEW
+      offset: 0x308
+      access: RW
+      reset: 0x00000000
+      description: "Inter-channel skew calibration"
+      fields:
+        - name: CH1_SKEW
+          bits: [7:0]
+          access: RW
+          description: "Channel 1 skew vs CH0 (signed)"
+        - name: CH2_SKEW
+          bits: [15:8]
+          access: RW
+          description: "Channel 2 skew vs CH0 (signed)"
+        - name: CH3_SKEW
+          bits: [23:16]
+          access: RW
+          description: "Channel 3 skew vs CH0 (signed)"
+
+    # --------------------------------------------------------------------------
+    # Version/ID Registers (0xF00 - 0xFFF)
+    # --------------------------------------------------------------------------
+    - name: VERSION
+      offset: 0xF00
+      access: RO
+      reset: 0x01000000
+      description: "IP version register"
+      fields:
+        - name: PATCH
+          bits: [7:0]
+          access: RO
+          reset: 0
+          description: "Patch version"
+        - name: MINOR
+          bits: [15:8]
+          access: RO
+          reset: 0
+          description: "Minor version"
+        - name: MAJOR
+          bits: [23:16]
+          access: RO
+          reset: 1
+          description: "Major version"
+        - name: RESERVED
+          bits: [31:24]
+          access: RO
+
+    - name: ID
+      offset: 0xF04
+      access: RO
+      reset: 0x51454454
+      description: "IP identification (ASCII 'QEDT')"
+      fields:
+        - name: VALUE
+          bits: [31:0]
+          access: RO
+          description: "ID value"
+
+    - name: BUILD_DATE
+      offset: 0xF08
+      access: RO
+      reset: 0x20260131
+      description: "Build date (BCD: YYYYMMDD)"
+      fields:
+        - name: VALUE
+          bits: [31:0]
+          access: RO
+          description: "Build date in BCD"
+
+    - name: GIT_HASH
+      offset: 0xF0C
+      access: RO
+      reset: 0x00000000
+      description: "Git commit hash (lower 32 bits)"
+      fields:
+        - name: VALUE
+          bits: [31:0]
+          access: RO
+          description: "Git hash"
