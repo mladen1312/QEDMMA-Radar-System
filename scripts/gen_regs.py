@@ -1,399 +1,324 @@
 #!/usr/bin/env python3
 """
-QEDMMA Register Auto-Generator
+QEDMMA Register Map Generator
+[REQ-GEN-REGS-001] SSOT → Multi-target code generation
+
+Generates from YAML SSOT:
+1. SystemVerilog package (.sv)
+2. C header (.h)
+3. Python driver class (.py)
+4. Device Tree overlay (.dts)
+
 Author: Dr. Mladen Mešter
 Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
-
-Generates RTL packages, C headers, Python drivers, and Device Tree overlays
-from a single YAML source of truth.
 """
 
-Usage:
-    python gen_regs.py --input regs.yaml --output-sv pkg.sv --output-h regs.h
-
-Traceability:
-    [REQ-GEN-001] Single source of truth for register definitions
-    [REQ-GEN-002] Auto-generate RTL, software, and documentation
-"""
-
-import argparse
 import yaml
-import sys
+import argparse
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
-
-class RegisterGenerator:
-    """Generate various output formats from YAML register definitions."""
+class RegisterMapGenerator:
+    """Generate multi-target code from YAML register definitions."""
     
     def __init__(self, yaml_path: str):
-        """Load YAML register definitions."""
         with open(yaml_path, 'r') as f:
-            self.data = yaml.safe_load(f)
+            self.config = yaml.safe_load(f)
         
-        self.module = self.data.get('module', {})
-        self.registers = self.data.get('module', {}).get('registers', [])
-        self.module_name = self.module.get('name', 'unknown')
-        self.version = self.module.get('version', '0.0.0')
-        self.addr_width = self.module.get('addr_width', 12)
-        self.data_width = self.module.get('data_width', 32)
-        
-    def generate_sv_package(self) -> str:
-        """Generate SystemVerilog register package."""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+        self.module_name = self.config.get('module', 'unknown')
+        self.base_addr = self.config.get('base_address', '0x00000000')
+        self.registers = self.config.get('registers', [])
+        self.version = self.config.get('version', '1.0.0')
+        self.timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    def generate_sv(self) -> str:
+        """Generate SystemVerilog package."""
         lines = [
-            f"// =============================================================================",
-            f"// {self.module_name.upper()} Register Package",
-            f"// Auto-generated from YAML - DO NOT EDIT MANUALLY",
-            f"// Generator: QEDMMA Forge v9.0",
-            f"// Generated: {timestamp}",
+            f"// Auto-generated from YAML SSOT - DO NOT EDIT",
+            f"// Module: {self.module_name}",
+            f"// Generated: {self.timestamp}",
             f"// Version: {self.version}",
-            f"// =============================================================================",
-            f"",
-            f"`ifndef {self.module_name.upper()}_REGS_PKG_SV",
-            f"`define {self.module_name.upper()}_REGS_PKG_SV",
-            f"",
+            "",
             f"package {self.module_name}_regs_pkg;",
-            f"",
-            f"  // Address Map Constants",
-            f"  localparam int ADDR_WIDTH = {self.addr_width};",
-            f"  localparam int DATA_WIDTH = {self.data_width};",
-            f"",
+            "",
+            f"  // Base address",
+            f"  localparam logic [31:0] {self.module_name.upper()}_BASE = 32'h{self.base_addr[2:]};",
+            "",
+            f"  // Register offsets",
         ]
         
-        # Generate address constants
-        lines.append("  // Register Addresses")
         for reg in self.registers:
-            name = reg.get('name', 'UNKNOWN')
-            offset = reg.get('offset', 0)
+            name = reg['name'].upper()
+            offset = reg['offset']
             desc = reg.get('description', '')
-            lines.append(f"  localparam logic [{self.addr_width-1}:0] ADDR_{name} = {self.addr_width}'h{offset:03X}; // {desc}")
+            lines.append(f"  localparam logic [15:0] REG_{name} = 16'h{offset[2:]:>04s};  // {desc}")
         
-        lines.append("")
+        lines.extend(["", "  // Field definitions"])
         
-        # Generate field bit positions
-        lines.append("  // Field Bit Positions")
         for reg in self.registers:
-            reg_name = reg.get('name', 'UNKNOWN')
-            fields = reg.get('fields', [])
-            for field in fields:
-                if 'inherit' in reg:
-                    continue  # Skip inherited registers
-                field_name = field.get('name', 'UNKNOWN')
-                bits = field.get('bits', [0])
-                if isinstance(bits, list):
-                    if len(bits) == 1:
-                        lines.append(f"  localparam int {reg_name}_{field_name}_BIT = {bits[0]};")
-                    else:
-                        lines.append(f"  localparam int {reg_name}_{field_name}_LSB = {bits[1]};")
-                        lines.append(f"  localparam int {reg_name}_{field_name}_MSB = {bits[0]};")
+            if 'fields' in reg:
+                reg_name = reg['name'].upper()
+                lines.append(f"  // {reg_name} fields")
+                for field in reg['fields']:
+                    fname = field['name'].upper()
+                    msb = field['bits'][0]
+                    lsb = field['bits'][1] if len(field['bits']) > 1 else field['bits'][0]
+                    lines.append(f"  localparam int {reg_name}_{fname}_MSB = {msb};")
+                    lines.append(f"  localparam int {reg_name}_{fname}_LSB = {lsb};")
+                lines.append("")
         
-        lines.append("")
-        
-        # Generate enumerations
-        lines.append("  // Enumerations")
-        for reg in self.registers:
-            fields = reg.get('fields', [])
-            for field in fields:
-                enum = field.get('enum', [])
-                if enum:
-                    field_name = field.get('name', 'UNKNOWN')
-                    bits = field.get('bits', [0, 0])
-                    width = bits[0] - bits[1] + 1 if isinstance(bits, list) and len(bits) > 1 else 1
-                    lines.append(f"  typedef enum logic [{width-1}:0] {{")
-                    for i, e in enumerate(enum):
-                        comma = "," if i < len(enum) - 1 else ""
-                        lines.append(f"    {field_name}_{e['name']} = {width}'d{e['value']}{comma}")
-                    lines.append(f"  }} {field_name.lower()}_e;")
-                    lines.append("")
-        
-        # Generate reset values
-        lines.append("  // Reset Values")
-        for reg in self.registers:
-            if 'inherit' in reg:
-                continue
-            name = reg.get('name', 'UNKNOWN')
-            reset = reg.get('reset', 0)
-            if reset is not None:
-                lines.append(f"  localparam logic [31:0] {name}_RESET = 32'h{reset:08X};")
-        
-        lines.append("")
-        lines.append(f"endpackage : {self.module_name}_regs_pkg")
-        lines.append("")
-        lines.append(f"`endif // {self.module_name.upper()}_REGS_PKG_SV")
+        lines.extend([
+            "",
+            f"endpackage : {self.module_name}_regs_pkg",
+        ])
         
         return '\n'.join(lines)
     
     def generate_c_header(self) -> str:
-        """Generate C header file for register access."""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        """Generate C header file."""
         guard = f"__{self.module_name.upper()}_REGS_H__"
         
         lines = [
             f"/**",
-            f" * @file {self.module_name}_regs.h",
-            f" * @brief {self.module.get('description', 'Register definitions')}",
-            f" *",
-            f" * Auto-generated from YAML - DO NOT EDIT MANUALLY",
-            f" * Generator: QEDMMA Forge v9.0",
-            f" * Generated: {timestamp}",
+            f" * Auto-generated from YAML SSOT - DO NOT EDIT",
+            f" * Module: {self.module_name}",
+            f" * Generated: {self.timestamp}",
             f" * Version: {self.version}",
             f" */",
-            f"",
+            "",
             f"#ifndef {guard}",
             f"#define {guard}",
-            f"",
+            "",
             f"#include <stdint.h>",
-            f"",
-            f"#ifdef __cplusplus",
-            f'extern "C" {{',
-            f"#endif",
-            f"",
-            f"/* Base address (set by platform) */",
-            f"#ifndef {self.module_name.upper()}_BASE_ADDR",
-            f"#define {self.module_name.upper()}_BASE_ADDR 0x80000000UL",
-            f"#endif",
-            f"",
-            f"/* Register Offsets */",
+            "",
+            f"/* Base address */",
+            f"#define {self.module_name.upper()}_BASE  ({self.base_addr}UL)",
+            "",
+            f"/* Register offsets */",
         ]
         
-        # Generate register offsets
         for reg in self.registers:
-            name = reg.get('name', 'UNKNOWN')
-            offset = reg.get('offset', 0)
+            name = reg['name'].upper()
+            offset = reg['offset']
             desc = reg.get('description', '')
-            lines.append(f"#define {self.module_name.upper()}_{name}_OFFSET 0x{offset:03X}U /* {desc} */")
+            lines.append(f"#define REG_{name}  ({offset}UL)  /* {desc} */")
         
-        lines.append("")
-        lines.append("/* Register Addresses */")
+        lines.extend(["", "/* Field masks and shifts */"])
+        
         for reg in self.registers:
-            name = reg.get('name', 'UNKNOWN')
-            offset = reg.get('offset', 0)
-            lines.append(f"#define {self.module_name.upper()}_{name} ({self.module_name.upper()}_BASE_ADDR + 0x{offset:03X}U)")
+            if 'fields' in reg:
+                reg_name = reg['name'].upper()
+                for field in reg['fields']:
+                    fname = field['name'].upper()
+                    msb = field['bits'][0]
+                    lsb = field['bits'][1] if len(field['bits']) > 1 else field['bits'][0]
+                    width = msb - lsb + 1
+                    mask = ((1 << width) - 1) << lsb
+                    lines.append(f"#define {reg_name}_{fname}_SHIFT  ({lsb})")
+                    lines.append(f"#define {reg_name}_{fname}_MASK   (0x{mask:08X}UL)")
         
-        lines.append("")
-        lines.append("/* Field Masks and Positions */")
-        for reg in self.registers:
-            if 'inherit' in reg:
-                continue
-            reg_name = reg.get('name', 'UNKNOWN')
-            fields = reg.get('fields', [])
-            for field in fields:
-                field_name = field.get('name', 'UNKNOWN')
-                bits = field.get('bits', [0])
-                if isinstance(bits, list) and len(bits) > 1:
-                    msb, lsb = bits[0], bits[1]
-                    mask = ((1 << (msb - lsb + 1)) - 1) << lsb
-                    lines.append(f"#define {self.module_name.upper()}_{reg_name}_{field_name}_POS  {lsb}U")
-                    lines.append(f"#define {self.module_name.upper()}_{reg_name}_{field_name}_MASK 0x{mask:08X}U")
-                else:
-                    bit = bits[0] if isinstance(bits, list) else bits
-                    lines.append(f"#define {self.module_name.upper()}_{reg_name}_{field_name}_BIT  {bit}U")
-                    lines.append(f"#define {self.module_name.upper()}_{reg_name}_{field_name}_MASK (1U << {bit}U)")
-        
-        # Generate helper macros
         lines.extend([
             "",
-            "/* Helper Macros */",
-            f"#define {self.module_name.upper()}_READ(reg) (*(volatile uint32_t*)(reg))",
-            f"#define {self.module_name.upper()}_WRITE(reg, val) (*(volatile uint32_t*)(reg) = (val))",
-            f"#define {self.module_name.upper()}_SET_BITS(reg, mask) {self.module_name.upper()}_WRITE(reg, {self.module_name.upper()}_READ(reg) | (mask))",
-            f"#define {self.module_name.upper()}_CLR_BITS(reg, mask) {self.module_name.upper()}_WRITE(reg, {self.module_name.upper()}_READ(reg) & ~(mask))",
+            "/* Register access macros */",
+            f"#define {self.module_name.upper()}_READ(offset)  \\",
+            f"    (*(volatile uint32_t*)({self.module_name.upper()}_BASE + (offset)))",
             "",
-            "#ifdef __cplusplus",
-            "}",
-            "#endif",
+            f"#define {self.module_name.upper()}_WRITE(offset, val)  \\",
+            f"    (*(volatile uint32_t*)({self.module_name.upper()}_BASE + (offset)) = (val))",
             "",
             f"#endif /* {guard} */",
         ])
         
         return '\n'.join(lines)
     
-    def generate_python_driver(self) -> str:
-        """Generate Python driver class for register access."""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+    def generate_python(self) -> str:
+        """Generate Python driver class."""
         lines = [
             f'"""',
-            f'{self.module_name} Register Driver',
-            f'',
-            f'Auto-generated from YAML - DO NOT EDIT MANUALLY',
-            f'Generator: QEDMMA Forge v9.0',
-            f'Generated: {timestamp}',
+            f'Auto-generated from YAML SSOT - DO NOT EDIT',
+            f'Module: {self.module_name}',
+            f'Generated: {self.timestamp}',
             f'Version: {self.version}',
             f'"""',
-            f'',
-            f'from typing import Optional',
-            f'import struct',
-            f'',
-            f'',
-            f'class {self.module_name.title().replace("_", "")}Regs:',
-            f'    """Register access class for {self.module_name}."""',
-            f'',
-            f'    # Register Offsets',
+            "",
+            "from typing import Optional",
+            "import struct",
+            "",
+            f"class {self.module_name.title().replace('_', '')}Registers:",
+            f'    """Register interface for {self.module_name}."""',
+            "",
+            f"    BASE_ADDRESS = {self.base_addr}",
+            "",
+            "    # Register offsets",
         ]
         
-        # Generate constants
         for reg in self.registers:
-            name = reg.get('name', 'UNKNOWN')
-            offset = reg.get('offset', 0)
-            lines.append(f'    ADDR_{name} = 0x{offset:03X}')
+            name = reg['name'].upper()
+            offset = reg['offset']
+            lines.append(f"    REG_{name} = {offset}")
         
-        lines.append('')
-        lines.append('    def __init__(self, base_addr: int = 0x80000000, read_fn=None, write_fn=None):')
-        lines.append('        """Initialize with base address and optional read/write functions."""')
-        lines.append('        self.base_addr = base_addr')
-        lines.append('        self._read_fn = read_fn')
-        lines.append('        self._write_fn = write_fn')
-        lines.append('')
-        lines.append('    def read(self, offset: int) -> int:')
-        lines.append('        """Read register at offset."""')
-        lines.append('        if self._read_fn:')
-        lines.append('            return self._read_fn(self.base_addr + offset)')
-        lines.append('        raise NotImplementedError("No read function provided")')
-        lines.append('')
-        lines.append('    def write(self, offset: int, value: int) -> None:')
-        lines.append('        """Write register at offset."""')
-        lines.append('        if self._write_fn:')
-        lines.append('            self._write_fn(self.base_addr + offset, value)')
-        lines.append('        else:')
-        lines.append('            raise NotImplementedError("No write function provided")')
-        lines.append('')
+        lines.extend([
+            "",
+            "    def __init__(self, read_func, write_func):",
+            '        """',
+            '        Initialize with platform-specific read/write functions.',
+            '        ',
+            '        Args:',
+            '            read_func: Callable(address) -> uint32',
+            '            write_func: Callable(address, value) -> None',
+            '        """',
+            "        self._read = read_func",
+            "        self._write = write_func",
+            "",
+            "    def read(self, offset: int) -> int:",
+            '        """Read register at offset."""',
+            "        return self._read(self.BASE_ADDRESS + offset)",
+            "",
+            "    def write(self, offset: int, value: int) -> None:",
+            '        """Write register at offset."""',
+            "        self._write(self.BASE_ADDRESS + offset, value)",
+            "",
+        ])
         
-        # Generate register access methods
+        # Generate property getters/setters for each register
         for reg in self.registers:
-            if 'inherit' in reg:
-                continue
-            name = reg.get('name', 'UNKNOWN')
+            name = reg['name'].lower()
+            name_upper = reg['name'].upper()
             access = reg.get('access', 'RW')
             desc = reg.get('description', '')
             
-            # Read method
-            lines.append(f'    def read_{name.lower()}(self) -> int:')
-            lines.append(f'        """Read {name} register. {desc}"""')
-            lines.append(f'        return self.read(self.ADDR_{name})')
-            lines.append('')
+            lines.extend([
+                "    @property",
+                f"    def {name}(self) -> int:",
+                f'        """{desc}"""',
+                f"        return self.read(self.REG_{name_upper})",
+                "",
+            ])
             
-            # Write method (if writable)
             if 'W' in access:
-                lines.append(f'    def write_{name.lower()}(self, value: int) -> None:')
-                lines.append(f'        """Write {name} register. {desc}"""')
-                lines.append(f'        self.write(self.ADDR_{name}, value)')
-                lines.append('')
-        
-        # Generate field access methods
-        lines.append('    # Field Access Methods')
-        for reg in self.registers:
-            if 'inherit' in reg:
-                continue
-            reg_name = reg.get('name', 'UNKNOWN')
-            fields = reg.get('fields', [])
-            for field in fields:
-                field_name = field.get('name', 'UNKNOWN')
-                bits = field.get('bits', [0])
-                desc = field.get('description', '')
-                
-                if isinstance(bits, list) and len(bits) > 1:
-                    msb, lsb = bits[0], bits[1]
-                    mask = (1 << (msb - lsb + 1)) - 1
-                else:
-                    lsb = bits[0] if isinstance(bits, list) else bits
-                    mask = 1
-                
-                lines.append(f'    def get_{reg_name.lower()}_{field_name.lower()}(self) -> int:')
-                lines.append(f'        """Get {field_name} field from {reg_name}. {desc}"""')
-                lines.append(f'        return (self.read_{reg_name.lower()}() >> {lsb}) & 0x{mask:X}')
-                lines.append('')
+                lines.extend([
+                    f"    @{name}.setter",
+                    f"    def {name}(self, value: int) -> None:",
+                    f"        self.write(self.REG_{name_upper}, value)",
+                    "",
+                ])
         
         return '\n'.join(lines)
     
-    def generate_device_tree(self) -> str:
-        """Generate Device Tree overlay."""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+    def generate_dts(self) -> str:
+        """Generate Device Tree Source overlay."""
         lines = [
-            f"/*",
-            f" * Device Tree Overlay for {self.module_name}",
-            f" *",
-            f" * Auto-generated from YAML - DO NOT EDIT MANUALLY",
-            f" * Generator: QEDMMA Forge v9.0",
-            f" * Generated: {timestamp}",
-            f" * Version: {self.version}",
-            f" */",
-            f"",
-            f"/dts-v1/;",
-            f"/plugin/;",
-            f"",
-            f"/ {{",
-            f"    compatible = \"xlnx,zynqmp\";",
-            f"",
+            f"/* Auto-generated from YAML SSOT - DO NOT EDIT */",
+            f"/* Module: {self.module_name} */",
+            f"/* Generated: {self.timestamp} */",
+            "",
+            "/dts-v1/;",
+            "/plugin/;",
+            "",
+            "/ {",
+            "    compatible = \"xlnx,zynqmp\";",
+            "",
             f"    fragment@0 {{",
             f"        target = <&amba>;",
             f"        __overlay__ {{",
-            f"            {self.module_name}: {self.module_name}@80000000 {{",
-            f"                compatible = \"qedmma,{self.module_name}\";",
-            f"                reg = <0x0 0x80000000 0x0 0x{1 << self.addr_width:X}>;",
-            f"                interrupt-parent = <&gic>;",
-            f"                interrupts = <0 89 4>;",
-            f"                clocks = <&zynqmp_clk 71>, <&zynqmp_clk 72>;",
-            f"                clock-names = \"axi_clk\", \"ts_clk\";",
+            f"            {self.module_name}: {self.module_name}@{self.base_addr[2:]} {{",
+            f'                compatible = "qedmma,{self.module_name}";',
+            f"                reg = <0x0 {self.base_addr} 0x0 0x1000>;",
             f"                status = \"okay\";",
+        ]
+        
+        # Add register info as properties
+        lines.append(f"                /* Register map */")
+        for reg in self.registers:
+            name = reg['name'].lower().replace('_', '-')
+            offset = reg['offset']
+            lines.append(f"                qedmma,reg-{name} = <{offset}>;")
+        
+        lines.extend([
             f"            }};",
             f"        }};",
             f"    }};",
-            f"}};",
-        ]
+            "};",
+        ])
         
         return '\n'.join(lines)
+    
+    def generate_all(self, output_dir: str) -> Dict[str, str]:
+        """Generate all output files."""
+        os.makedirs(output_dir, exist_ok=True)
+        
+        outputs = {}
+        
+        # SystemVerilog
+        sv_path = os.path.join(output_dir, f"{self.module_name}_regs_pkg.sv")
+        with open(sv_path, 'w') as f:
+            content = self.generate_sv()
+            f.write(content)
+            outputs['sv'] = sv_path
+        
+        # C header
+        h_path = os.path.join(output_dir, f"{self.module_name}_regs.h")
+        with open(h_path, 'w') as f:
+            content = self.generate_c_header()
+            f.write(content)
+            outputs['c'] = h_path
+        
+        # Python
+        py_path = os.path.join(output_dir, f"{self.module_name}_regs.py")
+        with open(py_path, 'w') as f:
+            content = self.generate_python()
+            f.write(content)
+            outputs['py'] = py_path
+        
+        # Device Tree
+        dts_path = os.path.join(output_dir, f"{self.module_name}.dtso")
+        with open(dts_path, 'w') as f:
+            content = self.generate_dts()
+            f.write(content)
+            outputs['dts'] = dts_path
+        
+        return outputs
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate register definitions from YAML')
-    parser.add_argument('--input', '-i', required=True, help='Input YAML file')
-    parser.add_argument('--output-sv', help='Output SystemVerilog package')
-    parser.add_argument('--output-h', help='Output C header')
-    parser.add_argument('--output-py', help='Output Python driver')
-    parser.add_argument('--output-dts', help='Output Device Tree overlay')
-    parser.add_argument('--all', '-a', action='store_true', help='Generate all outputs')
+    parser = argparse.ArgumentParser(
+        description='Generate code from YAML register map SSOT'
+    )
+    parser.add_argument(
+        '--input', '-i',
+        required=True,
+        help='Input YAML file path (or glob pattern)'
+    )
+    parser.add_argument(
+        '--output', '-o',
+        default='./generated',
+        help='Output directory'
+    )
+    parser.add_argument(
+        '--format', '-f',
+        choices=['all', 'sv', 'c', 'py', 'dts'],
+        default='all',
+        help='Output format(s)'
+    )
     
     args = parser.parse_args()
     
-    gen = RegisterGenerator(args.input)
+    # Handle glob patterns
+    input_files = list(Path('.').glob(args.input)) if '*' in args.input else [Path(args.input)]
     
-    outputs = []
+    for yaml_path in input_files:
+        print(f"Processing: {yaml_path}")
+        
+        gen = RegisterMapGenerator(str(yaml_path))
+        outputs = gen.generate_all(args.output)
+        
+        for fmt, path in outputs.items():
+            print(f"  ✅ Generated: {path}")
     
-    if args.output_sv or args.all:
-        sv_path = args.output_sv or f"{gen.module_name}_regs_pkg.sv"
-        with open(sv_path, 'w') as f:
-            f.write(gen.generate_sv_package())
-        outputs.append(sv_path)
-        
-    if args.output_h or args.all:
-        h_path = args.output_h or f"{gen.module_name}_regs.h"
-        with open(h_path, 'w') as f:
-            f.write(gen.generate_c_header())
-        outputs.append(h_path)
-        
-    if args.output_py or args.all:
-        py_path = args.output_py or f"{gen.module_name}_regs.py"
-        with open(py_path, 'w') as f:
-            f.write(gen.generate_python_driver())
-        outputs.append(py_path)
-        
-    if args.output_dts or args.all:
-        dts_path = args.output_dts or f"{gen.module_name}.dts"
-        with open(dts_path, 'w') as f:
-            f.write(gen.generate_device_tree())
-        outputs.append(dts_path)
-    
-    if outputs:
-        print(f"Generated: {', '.join(outputs)}")
-    else:
-        print("No outputs specified. Use --output-* or --all")
-        sys.exit(1)
+    print(f"\n✅ All outputs generated in: {args.output}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
