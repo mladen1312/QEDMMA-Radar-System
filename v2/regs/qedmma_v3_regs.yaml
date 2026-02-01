@@ -1,0 +1,238 @@
+# QEDMMA v3.0 Register Map
+# Single Source of Truth for Hardware/Software Interface
+
+module: qedmma_v3_core
+base_address: "0x80000000"
+version: "3.0.0"
+description: "QEDMMA v3.0 Core Registers - Quantum RX + 200 Mchip/s Waveform"
+
+registers:
+  # ============================================================
+  # CONTROL REGISTERS (0x0000 - 0x00FF)
+  # ============================================================
+  - name: CTRL
+    offset: "0x0000"
+    access: RW
+    reset: "0x00000001"
+    description: "Global control register"
+    fields:
+      - name: ENABLE
+        bits: [0]
+        description: "System enable"
+      - name: QUANTUM_RX_EN
+        bits: [1]
+        description: "Enable Rydberg quantum receiver"
+      - name: WAVEFORM_MODE
+        bits: [5, 2]
+        description: "0=LFM, 1=PRBS, 2=OFDM, 3=CW"
+      - name: ECCM_EN
+        bits: [6]
+        description: "Enable ECCM subsystem"
+      - name: FUSION_EN
+        bits: [7]
+        description: "Enable sensor fusion"
+      - name: SOFT_RESET
+        bits: [31]
+        description: "Software reset (self-clearing)"
+
+  - name: STATUS
+    offset: "0x0004"
+    access: RO
+    description: "System status register"
+    fields:
+      - name: READY
+        bits: [0]
+        description: "System ready"
+      - name: QUANTUM_LOCK
+        bits: [1]
+        description: "Rydberg laser locked"
+      - name: PLL_LOCK
+        bits: [2]
+        description: "Reference PLL locked"
+      - name: OVERFLOW
+        bits: [3]
+        description: "DSP overflow detected"
+      - name: ACTIVE_TRACKS
+        bits: [19, 10]
+        description: "Number of active tracks"
+
+  # ============================================================
+  # QUANTUM RECEIVER REGISTERS (0x0100 - 0x01FF)
+  # ============================================================
+  - name: QUANTUM_CTRL
+    offset: "0x0100"
+    access: RW
+    description: "Quantum receiver control"
+    fields:
+      - name: PROBE_FREQ
+        bits: [15, 0]
+        description: "Probe laser frequency offset (MHz)"
+      - name: COUPLE_FREQ
+        bits: [31, 16]
+        description: "Coupling laser frequency offset (MHz)"
+
+  - name: QUANTUM_BIAS
+    offset: "0x0104"
+    access: RW
+    description: "Rydberg bias voltages"
+    fields:
+      - name: CELL_BIAS_X
+        bits: [11, 0]
+        description: "X-axis bias (mV, signed Q11.0)"
+      - name: CELL_BIAS_Y
+        bits: [23, 12]
+        description: "Y-axis bias (mV)"
+      - name: CELL_BIAS_Z
+        bits: [31, 24]
+        description: "Z-axis bias (mV)"
+
+  - name: QUANTUM_GAIN
+    offset: "0x0108"
+    access: RW
+    reset: "0x00001000"
+    description: "Quantum sensor gain control"
+    fields:
+      - name: RF_GAIN
+        bits: [15, 0]
+        description: "RF path gain (Q4.12 linear)"
+      - name: BASEBAND_GAIN
+        bits: [31, 16]
+        description: "Baseband gain (Q4.12)"
+
+  - name: QUANTUM_STATUS
+    offset: "0x010C"
+    access: RO
+    description: "Quantum receiver status"
+    fields:
+      - name: ATOM_DENSITY
+        bits: [15, 0]
+        description: "Estimated atom density (arb units)"
+      - name: TEMPERATURE
+        bits: [27, 16]
+        description: "Cell temperature (0.01 K units)"
+      - name: LASER_LOCK
+        bits: [28]
+        description: "Laser frequency lock status"
+
+  # ============================================================
+  # WAVEFORM GENERATOR REGISTERS (0x0200 - 0x02FF)
+  # ============================================================
+  - name: WAVEFORM_CTRL
+    offset: "0x0200"
+    access: RW
+    description: "Waveform generator control"
+    fields:
+      - name: TX_ENABLE
+        bits: [0]
+        description: "Transmit enable"
+      - name: WAVEFORM_TYPE
+        bits: [3, 1]
+        description: "0=LFM, 1=PRBS-11, 2=PRBS-15, 3=Gold"
+      - name: BANDWIDTH_SEL
+        bits: [7, 4]
+        description: "Bandwidth: 0=10MHz, 1=20MHz, ..., 15=200MHz"
+
+  - name: WAVEFORM_PRBS_CFG
+    offset: "0x0204"
+    access: RW
+    description: "PRBS waveform configuration (v3.0)"
+    fields:
+      - name: PRBS_POLYNOMIAL
+        bits: [15, 0]
+        description: "PRBS generator polynomial"
+      - name: PRBS_SEED
+        bits: [31, 16]
+        description: "PRBS initial seed"
+
+  - name: WAVEFORM_CHIP_RATE
+    offset: "0x0208"
+    access: RW
+    reset: "0x0BEBC200"  # 200e6 in hex
+    description: "Chip rate in Hz (v3.0: 200 Mchip/s)"
+
+  - name: WAVEFORM_CODE_LEN
+    offset: "0x020C"
+    access: RW
+    reset: "0x000007FF"  # 2047 chips
+    description: "Code length in chips"
+
+  - name: CHIRP_START_FREQ
+    offset: "0x0210"
+    access: RW
+    description: "LFM chirp start frequency (Hz)"
+
+  - name: CHIRP_STOP_FREQ
+    offset: "0x0214"
+    access: RW
+    description: "LFM chirp stop frequency (Hz)"
+
+  - name: CHIRP_DURATION
+    offset: "0x0218"
+    access: RW
+    reset: "0x000186A0"  # 100ms in us
+    description: "Chirp duration in microseconds"
+
+  # ============================================================
+  # DSP FIXED-POINT CONFIGURATION (0x0300 - 0x03FF)
+  # ============================================================
+  - name: DSP_FORMAT_CFG
+    offset: "0x0300"
+    access: RW
+    reset: "0x000F0010"
+    description: "DSP fixed-point format configuration"
+    fields:
+      - name: INPUT_Q_FORMAT
+        bits: [7, 0]
+        description: "Input Q format: [7:4]=int bits, [3:0]=frac bits"
+      - name: INTERNAL_Q_FORMAT
+        bits: [15, 8]
+        description: "Internal Q format for accumulators"
+      - name: OUTPUT_Q_FORMAT
+        bits: [23, 16]
+        description: "Output Q format"
+
+  - name: DSP_OVERFLOW_CTRL
+    offset: "0x0304"
+    access: RW
+    description: "DSP overflow handling"
+    fields:
+      - name: SATURATE_EN
+        bits: [0]
+        description: "Enable saturation (vs wrap)"
+      - name: OVERFLOW_INT_EN
+        bits: [1]
+        description: "Enable overflow interrupt"
+
+  - name: DSP_OVERFLOW_CNT
+    offset: "0x0308"
+    access: RO
+    description: "Overflow counter (for twin validation)"
+
+  # ============================================================
+  # STATISTICS (0x0F00 - 0x0FFF)
+  # ============================================================
+  - name: STAT_DETECTIONS
+    offset: "0x0F00"
+    access: RO
+    description: "Total target detections"
+
+  - name: STAT_TRACKS_FORMED
+    offset: "0x0F04"
+    access: RO
+    description: "Total tracks formed"
+
+  - name: STAT_JAM_EVENTS
+    offset: "0x0F08"
+    access: RO
+    description: "Jamming events detected"
+
+  - name: STAT_QUANTUM_SNR
+    offset: "0x0F0C"
+    access: RO
+    description: "Current quantum RX SNR (dB × 10)"
+
+  - name: VERSION
+    offset: "0x0FFC"
+    access: RO
+    reset: "0x03000000"
+    description: "IP version (major.minor.patch.build)"
