@@ -1,47 +1,85 @@
 /*
  * QEDMMA v3.1 - Device Tree Overlay
- * Target: Xilinx Zynq UltraScale+ ZU47DR
+ * Target: Xilinx Zynq UltraScale+ ZU47DR RFSoC
  * Author: Dr. Mladen Mešter
  * Copyright (c) 2026
+ *
+ * This overlay defines all QEDMMA IP cores and their register maps
+ * for integration with the Linux kernel.
  */
 
 /dts-v1/;
 /plugin/;
 
 / {
-    compatible = "xlnx,zynqmp";
+    compatible = "xlnx,zynqmp-zcu111-revA", "xlnx,zynqmp";
     
+    /* FPGA Region */
     fragment@0 {
         target = <&fpga_full>;
         __overlay__ {
             #address-cells = <2>;
             #size-cells = <2>;
             firmware-name = "xilinx/qedmma/qedmma_v3.bit";
+            resets = <&zynqmp_reset 116>;
         };
     };
     
+    /* AXI Interconnect */
     fragment@1 {
         target = <&amba>;
         __overlay__ {
             #address-cells = <2>;
             #size-cells = <2>;
             
-            /* PRBS-15/20 Correlator */
-            qedmma_correlator: correlator@a0000000 {
+            /* ============================================
+             * PRBS-15/PRBS-20 Dual-Mode Correlator
+             * Base: 0xA005_0000 | Size: 64KB
+             * ============================================ */
+            qedmma_correlator: correlator@a0050000 {
                 compatible = "qedmma,correlator-3.1";
                 reg = <0x0 0xa0050000 0x0 0x10000>;
                 interrupt-parent = <&gic>;
                 interrupts = <0 89 4>;
-                clocks = <&zynqmp_clk 71>;
-                clock-names = "axi_clk";
+                clocks = <&zynqmp_clk 71>, <&zynqmp_clk 72>;
+                clock-names = "axi_clk", "core_clk";
                 
-                qedmma,prbs-mode = <0>;  /* 0=PRBS-15, 1=PRBS-20 */
+                /* Configuration */
+                qedmma,version = <0x00030100>;  /* v3.1.0 */
                 qedmma,num-lanes = <8>;
-                qedmma,code-length-15 = <32767>;
-                qedmma,code-length-20 = <1048575>;
+                qedmma,acc-width = <48>;
+                
+                /* PRBS-15 Mode */
+                qedmma,prbs15-length = <32767>;
+                qedmma,prbs15-bram = <42>;
+                qedmma,prbs15-gain-db = <452>;  /* 45.2 × 10 */
+                
+                /* PRBS-20 Mode */
+                qedmma,prbs20-length = <1048575>;
+                qedmma,prbs20-bram = <922>;
+                qedmma,prbs20-gain-db = <602>;  /* 60.2 × 10 */
             };
             
-            /* Multi-Sensor Fusion Engine */
+            /* ============================================
+             * Coherent Integrator
+             * Base: 0xA00D_0000 | Size: 64KB
+             * ============================================ */
+            qedmma_integrator: integrator@a00d0000 {
+                compatible = "qedmma,coherent-integrator-3.1";
+                reg = <0x0 0xa00d0000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 94 4>;
+                
+                qedmma,max-pulses = <128>;
+                qedmma,default-pulses = <7>;
+                qedmma,acc-width = <48>;
+                qedmma,integration-gain-db = <85>;  /* 8.5 × 10 */
+            };
+            
+            /* ============================================
+             * Multi-Sensor Fusion Engine
+             * Base: 0xA006_0000 | Size: 64KB
+             * ============================================ */
             qedmma_fusion: fusion@a0060000 {
                 compatible = "qedmma,fusion-3.1";
                 reg = <0x0 0xa0060000 0x0 0x10000>;
@@ -50,84 +88,143 @@
                 
                 qedmma,max-tracks = <1024>;
                 qedmma,max-sensors = <6>;
+                qedmma,update-rate-hz = <100>;
+                qedmma,filter-type = "imm-mht";
             };
             
-            /* ECCM Controller */
+            /* ============================================
+             * ECCM Controller
+             * Base: 0xA007_0000 | Size: 64KB
+             * ============================================ */
             qedmma_eccm: eccm@a0070000 {
                 compatible = "qedmma,eccm-3.1";
                 reg = <0x0 0xa0070000 0x0 0x10000>;
                 interrupt-parent = <&gic>;
                 interrupts = <0 91 4>;
                 
-                qedmma,ml-cfar-enable = <1>;
-                qedmma,jammer-blanking = <1>;
+                qedmma,ml-cfar-enable;
+                qedmma,jammer-blanking-enable;
+                qedmma,eccm-gain-db = <84>;  /* 8.4 × 10 */
+                qedmma,max-jammers = <16>;
             };
             
-            /* White Rabbit PTP Core */
+            /* ============================================
+             * Digital AGC
+             * Base: 0xA00B_0000 | Size: 64KB
+             * ============================================ */
+            qedmma_agc: agc@a00b0000 {
+                compatible = "qedmma,digital-agc-3.1";
+                reg = <0x0 0xa00b0000 0x0 0x10000>;
+                
+                qedmma,gain-range-db = <72>;
+                qedmma,attack-time-ns = <80>;   /* 0.08 µs */
+                qedmma,decay-time-ms = <82>;
+                qedmma,threshold-dbfs = <-6>;
+            };
+            
+            /* ============================================
+             * Polyphase Decimator
+             * Base: 0xA00C_0000 | Size: 64KB
+             * ============================================ */
+            qedmma_polyphase: polyphase@a00c0000 {
+                compatible = "qedmma,polyphase-decimator-3.1";
+                reg = <0x0 0xa00c0000 0x0 0x10000>;
+                
+                qedmma,decimation-factor = <8>;
+                qedmma,num-phases = <8>;
+                qedmma,input-rate-msps = <200>;
+                qedmma,output-rate-msps = <25>;
+                qedmma,stopband-atten-db = <80>;
+            };
+            
+            /* ============================================
+             * White Rabbit PTP Core
+             * Base: 0xA009_0000 | Size: 64KB
+             * ============================================ */
             qedmma_wrptp: wrptp@a0090000 {
-                compatible = "qedmma,wr-ptp-3.1";
+                compatible = "qedmma,wr-ptp-3.1", "cern,wr-core";
                 reg = <0x0 0xa0090000 0x0 0x10000>;
                 interrupt-parent = <&gic>;
                 interrupts = <0 92 4>;
                 
                 qedmma,sync-accuracy-ps = <100>;
+                qedmma,holdover-ppb = <1>;
+                qedmma,pps-output-enable;
             };
             
-            /* Quantum Receiver Interface */
+            /* ============================================
+             * Quantum Receiver Interface
+             * Base: 0xA00A_0000 | Size: 64KB
+             * ============================================ */
             qedmma_quantum: quantum@a00a0000 {
                 compatible = "qedmma,quantum-rx-3.1";
                 reg = <0x0 0xa00a0000 0x0 0x10000>;
                 interrupt-parent = <&gic>;
                 interrupts = <0 93 4>;
                 
-                qedmma,quantum-gain-db = <182>;  /* 18.2 dB × 10 */
+                qedmma,quantum-gain-db = <182>;  /* 18.2 × 10 */
+                qedmma,atom = "rb87";
+                qedmma,coupling-wavelength-nm = <780>;
+                qedmma,probe-wavelength-nm = <480>;
             };
             
-            /* Digital AGC */
-            qedmma_agc: agc@a00b0000 {
-                compatible = "qedmma,digital-agc-3.1";
-                reg = <0x0 0xa00b0000 0x0 0x10000>;
-                
-                qedmma,attack-time-us = <0>;  /* 0.08 µs */
-                qedmma,decay-time-ms = <82>;
-                qedmma,gain-range-db = <72>;
-            };
-            
-            /* Polyphase Decimator */
-            qedmma_polyphase: polyphase@a00c0000 {
-                compatible = "qedmma,polyphase-3.1";
-                reg = <0x0 0xa00c0000 0x0 0x10000>;
-                
-                qedmma,decimation = <8>;
-                qedmma,input-rate-msps = <200>;
-                qedmma,output-rate-msps = <25>;
-            };
-            
-            /* Coherent Integrator */
-            qedmma_integrator: integrator@a00d0000 {
-                compatible = "qedmma,coherent-int-3.1";
-                reg = <0x0 0xa00d0000 0x0 0x10000>;
-                
-                qedmma,max-pulses = <128>;
-                qedmma,default-pulses = <7>;
-            };
-            
-            /* DMA Engine */
+            /* ============================================
+             * AXI DMA Engine
+             * Base: 0xA010_0000 | Size: 64KB
+             * ============================================ */
             qedmma_dma: dma@a0100000 {
-                compatible = "xlnx,axi-dma-7.1";
+                compatible = "xlnx,axi-dma-7.1", "xlnx,axi-dma-1.00.a";
                 reg = <0x0 0xa0100000 0x0 0x10000>;
+                #dma-cells = <1>;
                 interrupt-parent = <&gic>;
-                interrupts = <0 94 4>, <0 95 4>;
+                interrupts = <0 95 4>, <0 96 4>;
+                interrupt-names = "mm2s_introut", "s2mm_introut";
+                clocks = <&zynqmp_clk 71>;
+                clock-names = "m_axi_mm2s_aclk";
                 
                 dma-channel@a0100000 {
                     compatible = "xlnx,axi-dma-mm2s-channel";
-                    interrupts = <0 94 4>;
+                    dma-channels = <1>;
+                    xlnx,datawidth = <64>;
+                    xlnx,device-id = <0>;
                 };
                 
                 dma-channel@a0100030 {
                     compatible = "xlnx,axi-dma-s2mm-channel";
-                    interrupts = <0 95 4>;
+                    dma-channels = <1>;
+                    xlnx,datawidth = <64>;
+                    xlnx,device-id = <1>;
                 };
+            };
+            
+            /* ============================================
+             * Tri-Modal Communications
+             * Base: 0xA008_0000 | Size: 64KB
+             * ============================================ */
+            qedmma_comm: comm@a0080000 {
+                compatible = "qedmma,comm-3.1";
+                reg = <0x0 0xa0080000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 97 4>;
+                
+                qedmma,link16-enable;
+                qedmma,asterix-enable;
+                qedmma,nato-enable;
+            };
+        };
+    };
+    
+    /* Reserved Memory for DMA */
+    fragment@2 {
+        target-path = "/reserved-memory";
+        __overlay__ {
+            #address-cells = <2>;
+            #size-cells = <2>;
+            
+            qedmma_reserved: qedmma@70000000 {
+                compatible = "shared-dma-pool";
+                reg = <0x0 0x70000000 0x0 0x10000000>;  /* 256MB */
+                no-map;
             };
         };
     };
