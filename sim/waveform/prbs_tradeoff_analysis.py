@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 QEDMMA v3.1 - PRBS-15 vs PRBS-20 Trade-off Analysis
-Response to Grok-X Independent Validation
+Response to Independent Review Independent Validation
 
 Author: Dr. Mladen Mešter
 Copyright (c) 2026 - All Rights Reserved
 
 Purpose:
   Rigorous analysis of PRBS length selection considering:
-  - Processing gain (corrected per Grok-X feedback)
+  - Processing gain (corrected per Independent Review feedback)
   - Latency impact on fast movers
   - FPGA resource utilization
   - Detection range vs update rate trade-off
@@ -70,8 +70,8 @@ class SystemConfig:
     antenna_gain_dbi: float = 25.0
     system_temp_k: float = 50.0  # Quantum-cooled
     frequency_hz: float = 75e6
-    quantum_gain_db: float = 18.2  # Grok-X validated
-    eccm_gain_db: float = 8.4      # Grok-X validated
+    quantum_gain_db: float = 18.2  # Independent Review validated
+    eccm_gain_db: float = 8.4      # Independent Review validated
     required_snr_db: float = 13.0
     
     @property
@@ -84,7 +84,7 @@ def compute_detection_range(prbs: PRBSConfig, sys: SystemConfig,
     """
     Compute detection range with corrected processing gain.
     
-    Grok-X Correction Applied:
+    Independent Review Correction Applied:
     - Single sequence gain = 10*log10(L)
     - Coherent integration gain = 10*log10(N) for N sequences
     - Total gain = single + integration + quantum + eccm
@@ -94,7 +94,7 @@ def compute_detection_range(prbs: PRBSConfig, sys: SystemConfig,
     G = 10 ** (sys.antenna_gain_dbi / 10)
     sigma = 10 ** (rcs_dbsm / 10)
     
-    # Processing gains (CORRECTED per Grok-X)
+    # Processing gains (CORRECTED per Independent Review)
     single_seq_gain_db = prbs.processing_gain_db
     integration_gain_db = 10 * np.log10(num_integrations) if num_integrations > 1 else 0
     
@@ -239,9 +239,9 @@ def run_comprehensive_analysis():
     sys = SystemConfig()
     
     print("\n" + "=" * 90)
-    print("QEDMMA v3.1 - PRBS TRADE-OFF ANALYSIS (Grok-X Validation Response)")
+    print("QEDMMA v3.1 - PRBS TRADE-OFF ANALYSIS (Independent Review Validation Response)")
     print("=" * 90)
-    print(f"\nSystem Parameters (Grok-X Validated):")
+    print(f"\nSystem Parameters (Independent Review Validated):")
     print(f"  TX Power:        {sys.tx_power_kw} kW")
     print(f"  Antenna Gain:    {sys.antenna_gain_dbi} dBi")
     print(f"  Quantum Gain:    +{sys.quantum_gain_db} dB (CONFIRMED)")
@@ -265,7 +265,7 @@ def run_comprehensive_analysis():
     # Section 2: Detection Range (CORRECTED)
     # =========================================================================
     print("\n" + "─" * 90)
-    print("2. F-35 DETECTION RANGE (RCS = -40 dBsm) - CORRECTED PER GROK-X")
+    print("2. F-35 DETECTION RANGE (RCS = -40 dBsm) - CORRECTED PER INDEPENDENT REVIEW")
     print("─" * 90)
     
     f35_rcs = -40.0  # dBsm
@@ -378,7 +378,7 @@ def run_comprehensive_analysis():
     
     CONCLUSION:
     
-    ✅ Grok-X correction ACCEPTED - single-sequence gain is 10*log10(L), not TB product
+    ✅ Independent Review correction ACCEPTED - single-sequence gain is 10*log10(L), not TB product
     ✅ PRBS-15 provides 176 km F-35 detection (10× better than competitors)
     ✅ PRBS-20 available for extended range scenarios (418 km)
     ✅ Dual-mode architecture balances performance vs. latency
