@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 QEDMMA v3.1 - Correlator Architecture Deep Dive
-Response to Grok-X LFSR Analysis
+Response to Independent Review LFSR Analysis
 
 Author: Dr. Mladen Mešter
 Copyright (c) 2026 - All Rights Reserved
 
 Critical Clarification:
-- Grok-X is CORRECT: PRBS GENERATOR needs 0 BRAM (just LFSR)
+- Independent Review is CORRECT: PRBS GENERATOR needs 0 BRAM (just LFSR)
 - BUT: CORRELATOR needs storage for received signal processing
 - This analysis explores architectures to enable PRBS-20 correlation
 """
@@ -38,7 +38,7 @@ def analyze_correlator_architectures(code_length: int,
     """
     Analyze different correlator architectures for given code length.
     
-    Key insight from Grok-X:
+    Key insight from Independent Review:
     - PRBS GENERATOR: LFSR = 0 BRAM (just n FF + XOR)
     - CORRELATOR: Different story - depends on architecture
     """
@@ -75,7 +75,7 @@ def analyze_correlator_architectures(code_length: int,
     ))
     
     # =========================================================================
-    # Architecture 2: Sliding Correlator with LFSR (Grok-X Suggested)
+    # Architecture 2: Sliding Correlator with LFSR (Independent Review Suggested)
     # =========================================================================
     # Generate reference on-the-fly with LFSR
     # Accumulate correlation per range bin
@@ -235,7 +235,7 @@ def print_analysis():
     
     print("\n" + "=" * 95)
     print("QEDMMA v3.1 - CORRELATOR ARCHITECTURE ANALYSIS")
-    print("Response to Grok-X LFSR Insight")
+    print("Response to Independent Review LFSR Insight")
     print("=" * 95)
     
     print("""
@@ -243,7 +243,7 @@ def print_analysis():
     │                           CRITICAL CLARIFICATION                                        │
     ├─────────────────────────────────────────────────────────────────────────────────────────┤
     │                                                                                         │
-    │  Grok-X is CORRECT: PRBS GENERATOR needs 0 BRAM (just 20 FF + XOR for LFSR)            │
+    │  Independent Review is CORRECT: PRBS GENERATOR needs 0 BRAM (just 20 FF + XOR for LFSR)            │
     │                                                                                         │
     │  BUT: CORRELATOR needs storage for:                                                     │
     │  1. Received signal samples (to correlate against reference)                            │
@@ -251,7 +251,7 @@ def print_analysis():
     │                                                                                         │
     │  The 1821 BRAM estimate was for CORRELATOR storage, not PRBS generator!                │
     │                                                                                         │
-    │  However, Grok-X insight enables ALTERNATIVE ARCHITECTURES...                           │
+    │  However, Independent Review insight enables ALTERNATIVE ARCHITECTURES...                           │
     │                                                                                         │
     └─────────────────────────────────────────────────────────────────────────────────────────┘
     """)
@@ -322,7 +322,7 @@ def print_analysis():
     FINAL DECISION:
     
     ✅ PRBS-15 Direct: DEFAULT MODE (tactical)
-    ✅ PRBS-20 Multi-Rate: OPTIONAL MODE (strategic) - NOW FEASIBLE with Grok-X architecture
+    ✅ PRBS-20 Multi-Rate: OPTIONAL MODE (strategic) - NOW FEASIBLE with Independent Review architecture
     ✅ Both modes fit within ZU47DR resources
     """)
 
