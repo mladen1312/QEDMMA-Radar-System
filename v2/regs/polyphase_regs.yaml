@@ -1,0 +1,64 @@
+# QEDMMA v3.0 - Polyphase Decimator Register Map
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026
+
+module:
+  name: polyphase_decimator
+  description: "8-phase Polyphase FIR Decimation Filter"
+  base_address: 0x000C0000
+  version: "1.0.0"
+
+registers:
+  - name: CTRL
+    offset: 0x00
+    access: RW
+    description: "Filter Control"
+    fields:
+      - { name: enable,     bits: "0",    default: 1, desc: "Filter enable" }
+      - { name: bypass,     bits: "1",    default: 0, desc: "Bypass mode" }
+      - { name: reset,      bits: "2",    default: 0, desc: "Soft reset" }
+
+  - name: STATUS
+    offset: 0x04
+    access: RO
+    description: "Filter Status"
+    fields:
+      - { name: phase,      bits: "2:0",  desc: "Current phase (0-7)" }
+      - { name: overflow,   bits: "3",    desc: "Overflow detected" }
+      - { name: running,    bits: "4",    desc: "Filter active" }
+
+  - name: SCALE
+    offset: 0x08
+    access: RW
+    description: "Output scaling"
+    fields:
+      - { name: shift,      bits: "2:0",  default: 0, desc: "Output shift (0-7)" }
+
+  - name: COEF_ADDR
+    offset: 0x10
+    access: RW
+    description: "Coefficient memory address"
+    fields:
+      - { name: phase,      bits: "2:0",  desc: "Phase select (0-7)" }
+      - { name: tap,        bits: "5:3",  desc: "Tap select (0-7)" }
+
+  - name: COEF_DATA
+    offset: 0x14
+    access: RW
+    description: "Coefficient data (Q1.17)"
+    fields:
+      - { name: value,      bits: "17:0", desc: "Coefficient value" }
+
+# Filter Specifications
+specs:
+  decimation_factor: 8
+  input_rate_msps: 200
+  output_rate_msps: 25
+  total_taps: 64
+  taps_per_phase: 8
+  passband_mhz: 10
+  stopband_mhz: 15
+  passband_ripple_db: 0.05
+  stopband_atten_db: 80
+  group_delay_samples: 32
+  dsp48_count: 8
