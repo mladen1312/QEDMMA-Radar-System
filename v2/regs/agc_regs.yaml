@@ -1,0 +1,93 @@
+# QEDMMA v3.0 - Digital AGC Register Map
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026
+
+module:
+  name: digital_agc
+  description: "Digital Automatic Gain Control for Quantum Receiver"
+  base_address: 0x000B0000
+  version: "1.0.0"
+
+registers:
+  - name: CTRL
+    offset: 0x00
+    access: RW
+    description: "AGC Control"
+    fields:
+      - { name: enable,     bits: "0",    default: 0, desc: "AGC enable" }
+      - { name: freeze,     bits: "1",    default: 0, desc: "Freeze gain" }
+      - { name: reset,      bits: "2",    default: 0, desc: "Soft reset" }
+      - { name: blank_en,   bits: "3",    default: 1, desc: "Auto-blanking enable" }
+
+  - name: STATUS
+    offset: 0x04
+    access: RO
+    description: "AGC Status"
+    fields:
+      - { name: locked,       bits: "0",    desc: "AGC locked in range" }
+      - { name: saturated,    bits: "1",    desc: "Input saturation detected" }
+      - { name: weak_signal,  bits: "2",    desc: "Weak signal (max gain)" }
+      - { name: frozen,       bits: "3",    desc: "AGC frozen" }
+      - { name: state,        bits: "6:4",  desc: "FSM state" }
+
+  - name: TARGET_POWER
+    offset: 0x08
+    access: RW
+    description: "Target power level"
+    fields:
+      - { name: value, bits: "31:0", default: 0x10000000, desc: "Target power (linear)" }
+
+  - name: POWER_ESTIMATE
+    offset: 0x0C
+    access: RO
+    description: "Current power estimate"
+    fields:
+      - { name: value, bits: "31:0", desc: "Measured power (IIR filtered)" }
+
+  - name: GAIN_CONFIG
+    offset: 0x10
+    access: RW
+    description: "Gain limits"
+    fields:
+      - { name: max_gain,     bits: "11:0",   default: 0xFFF, desc: "Maximum gain" }
+      - { name: min_gain,     bits: "27:16",  default: 0x010, desc: "Minimum gain" }
+
+  - name: GAIN_CURRENT
+    offset: 0x14
+    access: RO
+    description: "Current gain value"
+    fields:
+      - { name: value, bits: "11:0", desc: "Current gain (Q4.8)" }
+
+  - name: INITIAL_GAIN
+    offset: 0x18
+    access: RW
+    description: "Initial gain after reset"
+    fields:
+      - { name: value, bits: "11:0", default: 0x100, desc: "Initial gain (unity=0x100)" }
+
+  - name: THRESHOLDS
+    offset: 0x1C
+    access: RW
+    description: "Power thresholds"
+    fields:
+      - { name: min_power, bits: "15:0",  default: 0x0100, desc: "Min signal (weak)" }
+      - { name: max_power, bits: "31:16", default: 0xF000, desc: "Max signal (saturate)" }
+
+  - name: DYNAMICS
+    offset: 0x20
+    access: RW
+    description: "Attack/Decay configuration"
+    fields:
+      - { name: attack_shift,  bits: "3:0",   default: 4,  desc: "Attack time 2^N samples" }
+      - { name: decay_shift,   bits: "11:8",  default: 14, desc: "Decay time 2^N samples" }
+      - { name: attack_step,   bits: "23:16", default: 64, desc: "Attack step size" }
+      - { name: decay_step,    bits: "31:24", default: 2,  desc: "Decay step size" }
+
+# Performance Specifications
+specs:
+  attack_time_us: 0.08        # 16 samples @ 200 MHz
+  decay_time_ms: 82           # 16384 samples @ 200 MHz
+  gain_range_db: 72           # 12-bit gain word
+  power_dynamic_range_db: 96  # 16-bit I/Q
+  settling_time_us: 10        # Typical lock time
