@@ -1,0 +1,342 @@
+#=============================================================================
+# QEDMMA v3.4 - ML-CFAR + HOJ Register Map
+# [REQ-ECCM-001] CFAR configuration
+# [REQ-ECCM-002] HOJ control
+# [REQ-ECCM-003] ML weights interface
+#
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 - All Rights Reserved
+#
+# Base Address: 0x4004_0000
+# Address Range: 4KB
+#=============================================================================
+
+module_name: ml_cfar_hoj_controller
+version: "3.4.0"
+base_address: 0x40040000
+address_width: 12
+
+registers:
+  #---------------------------------------------------------------------------
+  # Control Registers
+  #---------------------------------------------------------------------------
+  - name: CTRL
+    offset: 0x000
+    access: RW
+    reset: 0x00000000
+    description: "CFAR/HOJ Control Register"
+    fields:
+      - name: enable
+        bits: 0
+        description: "Enable CFAR processing"
+      - name: hoj_enable
+        bits: 1
+        description: "Enable Home-on-Jam mode"
+      - name: cfar_mode
+        bits: [4:2]
+        description: "CFAR mode: 0=CA, 1=GO, 2=SO, 3=OS, 4=ML"
+      - name: auto_mode
+        bits: 5
+        description: "Auto mode selection based on environment"
+      - name: ml_enable
+        bits: 6
+        description: "Enable ML threshold adjustment"
+      - name: continuous
+        bits: 7
+        description: "Continuous processing mode"
+
+  - name: PFA_CONFIG
+    offset: 0x004
+    access: RW
+    reset: 0x0000000A
+    description: "Probability of False Alarm Configuration"
+    fields:
+      - name: pfa_exponent
+        bits: [7:0]
+        description: "P_fa = 2^(-exponent), default 10 = 1e-4"
+      - name: alpha_override
+        bits: [23:8]
+        description: "Manual alpha value (if override_en=1)"
+      - name: override_en
+        bits: 24
+        description: "Use manual alpha instead of LUT"
+
+  - name: CFAR_WINDOW
+    offset: 0x008
+    access: RW
+    reset: 0x00040020
+    description: "CFAR Window Configuration"
+    fields:
+      - name: total_cells
+        bits: [7:0]
+        description: "Total reference cells (default 32)"
+      - name: guard_cells
+        bits: [15:8]
+        description: "Guard cells each side (default 4)"
+      - name: os_rank
+        bits: [23:16]
+        description: "OS-CFAR rank (k-th largest)"
+
+  - name: JAMMER_CONFIG
+    offset: 0x00C
+    access: RW
+    reset: 0x00140000
+    description: "Jammer Detection Configuration"
+    fields:
+      - name: threshold_db
+        bits: [7:0]
+        description: "Jammer detection threshold in dB (default 20)"
+      - name: blanking_range
+        bits: [23:8]
+        description: "Range bins to blank around jammer"
+      - name: hoj_track_enable
+        bits: 24
+        description: "Enable HOJ tracking output"
+
+  #---------------------------------------------------------------------------
+  # Status Registers
+  #---------------------------------------------------------------------------
+  - name: STATUS
+    offset: 0x010
+    access: RO
+    description: "CFAR/HOJ Status Register"
+    fields:
+      - name: processing
+        bits: 0
+        description: "CFAR processing active"
+      - name: detections_valid
+        bits: 1
+        description: "Detection output valid"
+      - name: jammer_present
+        bits: 2
+        description: "Jammer detected"
+      - name: hoj_valid
+        bits: 3
+        description: "HOJ data valid"
+      - name: clutter_edge
+        bits: 4
+        description: "Clutter edge detected"
+      - name: active_mode
+        bits: [7:5]
+        description: "Currently active CFAR mode"
+      - name: state
+        bits: [11:8]
+        description: "FSM state"
+
+  - name: NUM_DETECTIONS
+    offset: 0x014
+    access: RO
+    description: "Number of Detections"
+    fields:
+      - name: count
+        bits: [8:0]
+        description: "Number of targets detected this CPI"
+      - name: max_count
+        bits: [24:16]
+        description: "Maximum detections seen"
+
+  - name: NOISE_ESTIMATE
+    offset: 0x018
+    access: RO
+    description: "Noise Floor Estimate"
+    fields:
+      - name: noise_level
+        bits: [15:0]
+        description: "Current noise estimate"
+      - name: noise_variance
+        bits: [31:16]
+        description: "Noise variance estimate"
+
+  #---------------------------------------------------------------------------
+  # Jammer/HOJ Registers
+  #---------------------------------------------------------------------------
+  - name: JAMMER_POWER
+    offset: 0x020
+    access: RO
+    description: "Detected Jammer Power"
+    fields:
+      - name: power
+        bits: [15:0]
+        description: "Jammer power estimate"
+      - name: power_db
+        bits: [23:16]
+        description: "Jammer power in dB"
+
+  - name: JAMMER_BEARING
+    offset: 0x024
+    access: RO
+    description: "HOJ Bearing Estimate"
+    fields:
+      - name: azimuth
+        bits: [15:0]
+        description: "Jammer azimuth (0.01° resolution)"
+      - name: elevation
+        bits: [31:16]
+        description: "Jammer elevation (0.01° resolution)"
+
+  - name: JAMMER_RANGE
+    offset: 0x028
+    access: RO
+    description: "HOJ Range Estimate"
+    fields:
+      - name: range_m
+        bits: [23:0]
+        description: "Estimated range to jammer in meters"
+      - name: confidence
+        bits: [31:24]
+        description: "Range confidence (0-255)"
+
+  - name: JAMMER_VELOCITY
+    offset: 0x02C
+    access: RO
+    description: "HOJ Velocity Estimate"
+    fields:
+      - name: velocity
+        bits: [15:0]
+        description: "Jammer velocity in m/s (signed)"
+      - name: doppler_bin
+        bits: [31:16]
+        description: "Doppler bin of jammer"
+
+  #---------------------------------------------------------------------------
+  # ML Configuration Registers
+  #---------------------------------------------------------------------------
+  - name: ML_CTRL
+    offset: 0x040
+    access: RW
+    reset: 0x00000000
+    description: "ML Inference Control"
+    fields:
+      - name: weights_valid
+        bits: 0
+        description: "ML weights loaded and valid"
+      - name: inference_enable
+        bits: 1
+        description: "Enable ML inference"
+      - name: model_version
+        bits: [15:8]
+        description: "ML model version"
+
+  - name: ML_WEIGHTS_0
+    offset: 0x044
+    access: RW
+    description: "ML Weights [1:0]"
+    fields:
+      - name: weight_0
+        bits: [15:0]
+        description: "Weight 0 (signed Q8.8)"
+      - name: weight_1
+        bits: [31:16]
+        description: "Weight 1 (signed Q8.8)"
+
+  - name: ML_WEIGHTS_1
+    offset: 0x048
+    access: RW
+    description: "ML Weights [3:2]"
+    fields:
+      - name: weight_2
+        bits: [15:0]
+        description: "Weight 2 (signed Q8.8)"
+      - name: weight_3
+        bits: [31:16]
+        description: "Weight 3 (signed Q8.8)"
+
+  - name: ML_WEIGHTS_2
+    offset: 0x04C
+    access: RW
+    description: "ML Weights [5:4]"
+    fields:
+      - name: weight_4
+        bits: [15:0]
+        description: "Weight 4 (signed Q8.8)"
+      - name: weight_5
+        bits: [31:16]
+        description: "Weight 5 (signed Q8.8)"
+
+  - name: ML_WEIGHTS_3
+    offset: 0x050
+    access: RW
+    description: "ML Weights [7:6]"
+    fields:
+      - name: weight_6
+        bits: [15:0]
+        description: "Weight 6 (signed Q8.8)"
+      - name: weight_7
+        bits: [31:16]
+        description: "Weight 7 (signed Q8.8)"
+
+  - name: ML_BIAS
+    offset: 0x054
+    access: RW
+    description: "ML Bias Term"
+    fields:
+      - name: bias
+        bits: [15:0]
+        description: "Bias term (signed Q8.8)"
+
+  #---------------------------------------------------------------------------
+  # Detection Bitmap (read-only)
+  #---------------------------------------------------------------------------
+  - name: DETECT_BITMAP_0
+    offset: 0x080
+    access: RO
+    description: "Detection bitmap [31:0]"
+
+  - name: DETECT_BITMAP_1
+    offset: 0x084
+    access: RO
+    description: "Detection bitmap [63:32]"
+    
+  # ... continues for all 512 bits (16 registers)
+
+  #---------------------------------------------------------------------------
+  # Performance Counters
+  #---------------------------------------------------------------------------
+  - name: PERF_CYCLES
+    offset: 0x100
+    access: RO
+    description: "Processing Cycles Counter"
+    fields:
+      - name: cycles
+        bits: [31:0]
+        description: "Clock cycles for last CFAR run"
+
+  - name: PERF_DETECTIONS
+    offset: 0x104
+    access: RO
+    description: "Total Detections Counter"
+    fields:
+      - name: total
+        bits: [31:0]
+        description: "Cumulative detections"
+
+  - name: PERF_FALSE_ALARMS
+    offset: 0x108
+    access: RO
+    description: "Estimated False Alarms"
+    fields:
+      - name: count
+        bits: [31:0]
+        description: "Estimated false alarm count"
+
+  #---------------------------------------------------------------------------
+  # Version
+  #---------------------------------------------------------------------------
+  - name: VERSION
+    offset: 0xFFC
+    access: RO
+    reset: 0x00030400
+    description: "Module Version"
+    fields:
+      - name: patch
+        bits: [7:0]
+        description: "Patch version"
+      - name: minor
+        bits: [15:8]
+        description: "Minor version (4)"
+      - name: major
+        bits: [23:16]
+        description: "Major version (3)"
+      - name: id
+        bits: [31:24]
+        description: "Module ID (ECCM=0xEC)"
