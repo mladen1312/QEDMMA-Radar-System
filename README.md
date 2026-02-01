@@ -278,7 +278,6 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 ## 👤 Author
 
 **Dr. Mladen Mešter**  
-Medical Doctor & Radar Systems Architect  
 Zagreb, Croatia
 
 ---
