@@ -88,7 +88,7 @@ QEDMMA-Radar-System/
 │   └── polyphase_regs.yaml
 │
 ├── sim/waveform/
-│   ├── prbs_tradeoff_analysis.py          ⭐ NEW Grok-X response
+│   ├── prbs_tradeoff_analysis.py          ⭐ NEW 
 │   ├── correlator_architecture_analysis.py ⭐ NEW
 │   ├── ambiguity_analyzer.py              PRBS validation
 │   └── ...
