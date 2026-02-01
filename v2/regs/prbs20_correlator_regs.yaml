@@ -1,0 +1,114 @@
+# QEDMMA v3.1 - PRBS-20 Segmented Correlator Register Map
+# Grok-X + RSA Joint Architecture
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026
+
+module:
+  name: prbs20_segmented_correlator
+  description: "Dual-Mode PRBS-15/20 Segmented Correlator"
+  base_address: 0x000E0000
+  version: "1.0.0"
+
+registers:
+  - name: CTRL
+    offset: 0x00
+    access: RW
+    description: "Correlator Control"
+    fields:
+      - { name: enable,        bits: "0",    default: 1, desc: "Enable correlator" }
+      - { name: prbs_mode,     bits: "1",    default: 0, desc: "0=PRBS-15, 1=PRBS-20" }
+      - { name: clear,         bits: "2",    default: 0, desc: "Clear buffers/accumulators" }
+      - { name: start,         bits: "3",    default: 0, desc: "Start correlation" }
+
+  - name: STATUS
+    offset: 0x04
+    access: RO
+    description: "Correlator Status"
+    fields:
+      - { name: state,         bits: "2:0",  desc: "FSM state" }
+      - { name: segment,       bits: "5:3",  desc: "Active segment (0-7)" }
+      - { name: overflow,      bits: "6",    desc: "Accumulator overflow" }
+      - { name: done,          bits: "7",    desc: "Correlation complete" }
+
+  - name: CODE_LENGTH
+    offset: 0x08
+    access: RW
+    description: "Active code length"
+    fields:
+      - { name: length,        bits: "19:0", default: 32767, desc: "Code length (32767 or 1048575)" }
+
+  - name: THRESHOLD
+    offset: 0x0C
+    access: RW
+    description: "Detection threshold (lower 32 bits)"
+    fields:
+      - { name: value_lo,      bits: "31:0", default: 0x100000, desc: "Threshold low" }
+
+  - name: THRESHOLD_HI
+    offset: 0x10
+    access: RW
+    description: "Detection threshold (upper 16 bits)"
+    fields:
+      - { name: value_hi,      bits: "15:0", default: 0, desc: "Threshold high" }
+
+  - name: CHIP_COUNT
+    offset: 0x14
+    access: RO
+    description: "Current chip position"
+    fields:
+      - { name: count,         bits: "19:0", desc: "Chip counter" }
+
+  - name: DETECTION_COUNT
+    offset: 0x18
+    access: RO
+    description: "Number of detections"
+    fields:
+      - { name: count,         bits: "15:0", desc: "Detection count" }
+
+  - name: LAST_DET_BIN
+    offset: 0x1C
+    access: RO
+    description: "Last detection range bin"
+    fields:
+      - { name: bin,           bits: "19:0", desc: "Range bin index" }
+
+  - name: LAST_DET_MAG_LO
+    offset: 0x20
+    access: RO
+    description: "Last detection magnitude (low)"
+    fields:
+      - { name: value,         bits: "31:0", desc: "Magnitude low 32 bits" }
+
+  - name: LAST_DET_MAG_HI
+    offset: 0x24
+    access: RO
+    description: "Last detection magnitude (high)"
+    fields:
+      - { name: value,         bits: "15:0", desc: "Magnitude high 16 bits" }
+
+# Performance Specifications
+specs:
+  prbs_15:
+    code_length: 32767
+    bram_36kb: 42
+    processing_gain_db: 45.2
+    update_rate_hz: 6104
+    f35_range_km: 176
+    with_integration:
+      pulses: 7
+      total_gain_db: 80.3
+      f35_range_km: 526
+      
+  prbs_20:
+    code_length: 1048575
+    bram_36kb: 922
+    processing_gain_db: 60.2
+    update_rate_hz: 191
+    total_gain_db: 86.8  # with quantum + ECCM
+    f35_range_km: 769
+    
+  shared:
+    quantum_gain_db: 18.2
+    eccm_gain_db: 8.4
+    num_lanes: 8
+    segment_size: 131072
