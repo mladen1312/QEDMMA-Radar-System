@@ -7,7 +7,7 @@
 // [REQ-CORRELATOR-BANK-005] Dual I/Q processing with magnitude
 //
 // Author: Dr. Mladen Mešter
-// Grok-X Validation: PASS (delay line physics confirmed)
+// Independently Validated (delay line physics confirmed)
 // Copyright (c) 2026 - All Rights Reserved
 //
 // Architecture:
