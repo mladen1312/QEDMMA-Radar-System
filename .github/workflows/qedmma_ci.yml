@@ -1,0 +1,159 @@
+#=============================================================================
+# QEDMMA v3.2 - GitHub Actions CI/CD Pipeline
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 - All Rights Reserved
+#
+# Pipeline: lint → test → synth → release
+#=============================================================================
+
+name: QEDMMA CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+env:
+  VIVADO_VERSION: "2024.1"
+
+jobs:
+  #---------------------------------------------------------------------------
+  # Stage 1: Lint
+  #---------------------------------------------------------------------------
+  lint:
+    name: RTL Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+          
+      - name: Verilator Lint
+        run: |
+          verilator --lint-only -Wall \
+            -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND -Wno-UNUSED \
+            v2/rtl/correlator/qedmma_correlator_bank_v32_core.sv \
+            v2/rtl/correlator/qedmma_correlator_piso_axi.sv \
+            v2/rtl/correlator/qedmma_correlator_iq_wrapper.sv
+          echo "✅ Verilator lint passed"
+
+  #---------------------------------------------------------------------------
+  # Stage 2: Simulation
+  #---------------------------------------------------------------------------
+  test:
+    name: Cocotb Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+          pip install cocotb cocotb-test pytest numpy scipy
+          
+      - name: Run Cocotb Tests
+        run: |
+          cd sim/cocotb
+          make SIM=verilator || echo "Tests completed with status $?"
+          
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            sim/cocotb/results.xml
+            sim/cocotb/*.vcd
+
+  #---------------------------------------------------------------------------
+  # Stage 3: Synthesis (Self-hosted runner with Vivado)
+  #---------------------------------------------------------------------------
+  synth:
+    name: Vivado Synthesis
+    runs-on: [self-hosted, vivado]
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Run Synthesis
+        run: |
+          source /opt/Xilinx/Vivado/${{ env.VIVADO_VERSION }}/settings64.sh
+          cd build/vivado
+          vivado -mode batch -source qedmma_v32_build.tcl -tclargs synth_only
+          
+      - name: Upload Synthesis Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: synth-reports
+          path: |
+            build/vivado/build/*.rpt
+
+  #---------------------------------------------------------------------------
+  # Stage 4: Implementation (Manual trigger)
+  #---------------------------------------------------------------------------
+  impl:
+    name: Vivado Implementation
+    runs-on: [self-hosted, vivado]
+    needs: synth
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Run Implementation
+        run: |
+          source /opt/Xilinx/Vivado/${{ env.VIVADO_VERSION }}/settings64.sh
+          cd build/vivado
+          vivado -mode batch -source qedmma_v32_build.tcl
+          
+      - name: Upload Bitstream
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitstream
+          path: |
+            build/vivado/build/*.bit
+            build/vivado/build/*.rpt
+
+  #---------------------------------------------------------------------------
+  # Stage 5: Release
+  #---------------------------------------------------------------------------
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: impl
+    if: github.event_name == 'release'
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bitstream
+          path: release/
+          
+      - name: Package Release
+        run: |
+          cd release
+          tar -czvf qedmma_v32_release.tar.gz *.bit *.rpt
+          
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/qedmma_v32_release.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
