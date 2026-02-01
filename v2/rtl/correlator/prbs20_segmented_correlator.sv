@@ -13,7 +13,7 @@
 //   partial results accumulated.
 //
 //   Key Innovation:
-//   - TX: LFSR generator (0 BRAM) - Grok-X validated
+//   - TX: LFSR generator (0 BRAM)
 //   - RX: Segmented buffers + streaming accumulation
 //   - 8 parallel lanes per segment for throughput
 //
@@ -88,7 +88,7 @@ module prbs20_segmented_correlator #(
     localparam int SEG_ADDR_WIDTH   = $clog2(SEGMENT_LENGTH);      // 15 bits
     
     //=========================================================================
-    // LFSR PRBS-20 Generator (0 BRAM - Grok-X validated)
+    // LFSR PRBS-20 Generator (0 BRAM)
     //=========================================================================
     logic [19:0] lfsr;
     logic        lfsr_bit;
