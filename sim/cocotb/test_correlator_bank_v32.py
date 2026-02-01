@@ -6,7 +6,7 @@ QEDMMA v3.2 - Correlator Bank Cocotb Testbench
 [REQ-TB-003] Test PISO serialization to AXI-Stream
 
 Author: Dr. Mladen Mešter
-Grok-X Validated: Delay line physics confirmed
+
 Copyright (c) 2026
 """
 
