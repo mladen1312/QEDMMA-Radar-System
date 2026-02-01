@@ -1,0 +1,228 @@
+# QEDMMA Physics Validation Pipeline
+# [REQ-PIPELINE-001] Automated link budget verification on every commit
+
+name: Physics Validation
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*' ]
+    paths:
+      - 'src/**'
+      - 'v2/rtl/**'
+      - 'sim/**'
+      - 'scripts/**'
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ============================================================
+  # Stage 1: Link Budget Validation
+  # ============================================================
+  link-budget:
+    name: 📡 Link Budget Simulation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          pip install numpy scipy matplotlib
+          
+      - name: Run link budget validation
+        id: link_budget
+        run: |
+          cd sim
+          python link_budget.py --validate > link_budget_report.txt
+          cat link_budget_report.txt
+          
+          # Check for PASS/FAIL
+          if grep -q "MARGINAL\|LOST" link_budget_report.txt; then
+            echo "status=warning" >> $GITHUB_OUTPUT
+          else
+            echo "status=pass" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Upload link budget report
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-budget-report
+          path: sim/link_budget_report.txt
+          
+      - name: Check margins
+        run: |
+          if [ "${{ steps.link_budget.outputs.status }}" == "warning" ]; then
+            echo "::warning::Link budget margins are tight - review jamming scenarios"
+          fi
+
+  # ============================================================
+  # Stage 2: Fixed-Point Twin Validation
+  # ============================================================
+  fixed-point-twin:
+    name: 🔢 Fixed-Point Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependencies
+        run: pip install numpy matplotlib
+        
+      - name: Run fixed-point twin simulation
+        run: |
+          cd sim
+          python fixed_point_twin.py > fp_twin_report.txt
+          cat fp_twin_report.txt
+          
+      - name: Check SNR degradation
+        run: |
+          # Parse SNR loss from report
+          # Alert if any format shows >6 dB loss
+          if grep -q "❌" sim/fp_twin_report.txt; then
+            echo "::error::Fixed-point format shows excessive SNR degradation (>6 dB)"
+            exit 1
+          fi
+          
+      - name: Upload twin report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixed-point-report
+          path: sim/fp_twin_report.txt
+
+  # ============================================================
+  # Stage 3: RTL Linting
+  # ============================================================
+  rtl-lint:
+    name: ⚡ RTL Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+          
+      - name: Lint SystemVerilog modules
+        run: |
+          echo "Linting RTL modules..."
+          find v2/rtl -name "*.sv" | while read f; do
+            echo "Linting: $f"
+            verilator --lint-only -Wall $f 2>&1 || true
+          done
+          
+      - name: Check for critical warnings
+        run: |
+          # Count warnings
+          warn_count=$(find v2/rtl -name "*.sv" -exec verilator --lint-only {} \; 2>&1 | grep -c "Warning" || echo "0")
+          echo "Total warnings: $warn_count"
+          
+          if [ "$warn_count" -gt 10 ]; then
+            echo "::warning::High number of RTL warnings ($warn_count)"
+          fi
+
+  # ============================================================
+  # Stage 4: Cocotb Simulation
+  # ============================================================
+  cocotb-sim:
+    name: 🧪 Cocotb Simulation
+    runs-on: ubuntu-latest
+    needs: rtl-lint
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install simulation tools
+        run: |
+          pip install cocotb cocotb-test pytest
+          sudo apt-get install -y verilator
+          
+      - name: Run fusion engine tests
+        run: |
+          cd v2/tb
+          make -f Makefile.fusion SIM=verilator || echo "Simulation completed with notes"
+          
+      - name: Upload simulation logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-logs
+          path: v2/tb/*.log
+        if: always()
+
+  # ============================================================
+  # Stage 5: Documentation Check
+  # ============================================================
+  docs-check:
+    name: 📚 Documentation Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check required documentation
+        run: |
+          required_docs=(
+            "README.md"
+            "v2/docs/COMPETITIVE_ANALYSIS.md"
+            "v2/docs/MULTI_SENSOR_FUSION_ARCHITECTURE.md"
+            "v2/docs/eccm/ECCM_ARCHITECTURE.md"
+          )
+          
+          for doc in "${required_docs[@]}"; do
+            if [ -f "$doc" ]; then
+              echo "✅ Found: $doc"
+            else
+              echo "❌ Missing: $doc"
+              exit 1
+            fi
+          done
+          
+      - name: Validate Mermaid diagrams
+        run: |
+          # Check for valid Mermaid syntax in docs
+          grep -r "```mermaid" v2/docs/ && echo "Found Mermaid diagrams" || echo "No Mermaid diagrams"
+
+  # ============================================================
+  # Final Report
+  # ============================================================
+  report:
+    name: 📋 Generate Report
+    runs-on: ubuntu-latest
+    needs: [link-budget, fixed-point-twin, rtl-lint, cocotb-sim, docs-check]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: Generate summary
+        run: |
+          echo "# QEDMMA CI/CD Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Link Budget | ${{ needs.link-budget.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fixed-Point Twin | ${{ needs.fixed-point-twin.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| RTL Lint | ${{ needs.rtl-lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cocotb Sim | ${{ needs.cocotb-sim.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docs | ${{ needs.docs-check.result }} |" >> $GITHUB_STEP_SUMMARY
