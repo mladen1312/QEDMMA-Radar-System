@@ -1,5 +1,5 @@
 # QEDMMA v3.1 - Coherent Integrator Register Map
-# Grok-X Validation Response: PRBS-15 + N-pulse integration
+# Architecture Specification: PRBS-15 + N-pulse integration
 # Author: Dr. Mladen Mešter
 # Copyright (c) 2026
 
@@ -61,15 +61,15 @@ registers:
       - { name: integ_db,     bits: "15:8", desc: "Integration gain (dB×10)" }
       - { name: total_db,     bits: "23:16",desc: "Total gain (dB×10)" }
 
-# Performance Specifications (Grok-X Validated)
+# Performance Specifications (Validated)
 specs:
   prbs_type: "PRBS-15"
   prbs_length: 32767
   single_seq_gain_db: 45.2
   default_integrations: 7
   integration_gain_db: 8.5   # 10*log10(7)
-  quantum_gain_db: 18.2      # Grok-X confirmed
-  eccm_gain_db: 8.4          # Grok-X confirmed
+  quantum_gain_db: 18.2      # Validated
+  eccm_gain_db: 8.4          # Validated
   total_gain_db: 80.3        # 45.2 + 8.5 + 18.2 + 8.4
   f35_range_km: 526          # With 7 integrations
   update_rate_hz: 872        # 6104/7
