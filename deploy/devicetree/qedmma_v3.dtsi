@@ -1,0 +1,134 @@
+/*
+ * QEDMMA v3.1 - Device Tree Overlay
+ * Target: Xilinx Zynq UltraScale+ ZU47DR
+ * Author: Dr. Mladen Mešter
+ * Copyright (c) 2026
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "xlnx,zynqmp";
+    
+    fragment@0 {
+        target = <&fpga_full>;
+        __overlay__ {
+            #address-cells = <2>;
+            #size-cells = <2>;
+            firmware-name = "xilinx/qedmma/qedmma_v3.bit";
+        };
+    };
+    
+    fragment@1 {
+        target = <&amba>;
+        __overlay__ {
+            #address-cells = <2>;
+            #size-cells = <2>;
+            
+            /* PRBS-15/20 Correlator */
+            qedmma_correlator: correlator@a0000000 {
+                compatible = "qedmma,correlator-3.1";
+                reg = <0x0 0xa0050000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 89 4>;
+                clocks = <&zynqmp_clk 71>;
+                clock-names = "axi_clk";
+                
+                qedmma,prbs-mode = <0>;  /* 0=PRBS-15, 1=PRBS-20 */
+                qedmma,num-lanes = <8>;
+                qedmma,code-length-15 = <32767>;
+                qedmma,code-length-20 = <1048575>;
+            };
+            
+            /* Multi-Sensor Fusion Engine */
+            qedmma_fusion: fusion@a0060000 {
+                compatible = "qedmma,fusion-3.1";
+                reg = <0x0 0xa0060000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 90 4>;
+                
+                qedmma,max-tracks = <1024>;
+                qedmma,max-sensors = <6>;
+            };
+            
+            /* ECCM Controller */
+            qedmma_eccm: eccm@a0070000 {
+                compatible = "qedmma,eccm-3.1";
+                reg = <0x0 0xa0070000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 91 4>;
+                
+                qedmma,ml-cfar-enable = <1>;
+                qedmma,jammer-blanking = <1>;
+            };
+            
+            /* White Rabbit PTP Core */
+            qedmma_wrptp: wrptp@a0090000 {
+                compatible = "qedmma,wr-ptp-3.1";
+                reg = <0x0 0xa0090000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 92 4>;
+                
+                qedmma,sync-accuracy-ps = <100>;
+            };
+            
+            /* Quantum Receiver Interface */
+            qedmma_quantum: quantum@a00a0000 {
+                compatible = "qedmma,quantum-rx-3.1";
+                reg = <0x0 0xa00a0000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 93 4>;
+                
+                qedmma,quantum-gain-db = <182>;  /* 18.2 dB × 10 */
+            };
+            
+            /* Digital AGC */
+            qedmma_agc: agc@a00b0000 {
+                compatible = "qedmma,digital-agc-3.1";
+                reg = <0x0 0xa00b0000 0x0 0x10000>;
+                
+                qedmma,attack-time-us = <0>;  /* 0.08 µs */
+                qedmma,decay-time-ms = <82>;
+                qedmma,gain-range-db = <72>;
+            };
+            
+            /* Polyphase Decimator */
+            qedmma_polyphase: polyphase@a00c0000 {
+                compatible = "qedmma,polyphase-3.1";
+                reg = <0x0 0xa00c0000 0x0 0x10000>;
+                
+                qedmma,decimation = <8>;
+                qedmma,input-rate-msps = <200>;
+                qedmma,output-rate-msps = <25>;
+            };
+            
+            /* Coherent Integrator */
+            qedmma_integrator: integrator@a00d0000 {
+                compatible = "qedmma,coherent-int-3.1";
+                reg = <0x0 0xa00d0000 0x0 0x10000>;
+                
+                qedmma,max-pulses = <128>;
+                qedmma,default-pulses = <7>;
+            };
+            
+            /* DMA Engine */
+            qedmma_dma: dma@a0100000 {
+                compatible = "xlnx,axi-dma-7.1";
+                reg = <0x0 0xa0100000 0x0 0x10000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0 94 4>, <0 95 4>;
+                
+                dma-channel@a0100000 {
+                    compatible = "xlnx,axi-dma-mm2s-channel";
+                    interrupts = <0 94 4>;
+                };
+                
+                dma-channel@a0100030 {
+                    compatible = "xlnx,axi-dma-s2mm-channel";
+                    interrupts = <0 95 4>;
+                };
+            };
+        };
+    };
+};
