@@ -108,7 +108,7 @@ registers:
       - { name: prbs_gain,    bits: "15:0", desc: "PRBS gain (452 or 602)" }
       - { name: total_gain,   bits: "31:16", desc: "Total system gain (803 or 868)" }
 
-# Performance Specs (Grok-X Validated)
+# Performance Specs 
 performance:
   prbs15_mode:
     code_length: 32767
