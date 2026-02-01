@@ -1,5 +1,5 @@
 # QEDMMA v3.2 - 512-Lane Correlator Bank Register Map
-# Grok-X Physics Validated | Zero-DSP Architecture
+# Zero-DSP Architecture
 # Author: Dr. Mladen Mešter
 # Copyright (c) 2026
 
@@ -103,7 +103,7 @@ registers:
       - { name: minor,            bits: "15:8",   desc: "Minor version" }
       - { name: major,            bits: "23:16",  desc: "Major version" }
 
-# Performance Specifications (Grok-X Validated)
+# Performance Specifications ()
 specs:
   architecture:
     num_lanes: 512
