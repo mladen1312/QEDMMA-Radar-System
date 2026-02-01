@@ -9,7 +9,6 @@
 > **Revolutionary anti-stealth radar system with dual-mode PRBS-15/PRBS-20 correlation, Rydberg quantum receivers, AI-enhanced ECCM, and sub-100ps White Rabbit synchronization.**
 
 **Author:** Dr. Mladen Mešter  
-**Peer Review:** Grok-X Independent Validation  
 **Copyright © 2026** - All Rights Reserved
 
 ---
@@ -27,7 +26,7 @@
 | **Sync Accuracy** | <100 ps | <100 ps | >1 µs |
 | **BRAM Utilization** | 4% | 85% | N/A |
 
-*All claims independently validated by Grok-X peer review*
+*All claims independently validated by simulation*
 
 ---
 
