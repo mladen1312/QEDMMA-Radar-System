@@ -1,0 +1,361 @@
+# QEDMMA v2.0 Communication Controller Registers
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
+#
+# SSOT (Single Source of Truth) for register definitions
+# Auto-generates: .sv package, .h header, .py driver, .dts overlay
+
+module:
+  name: comm_controller
+  description: "QEDMMA v2.0 Tri-Modal Communication Controller"
+  version: "2.0.0"
+  base_address: 0x00040000
+  address_width: 16
+  data_width: 32
+  
+author:
+  name: "Dr. Mladen Mešter"
+  copyright: "2026 Dr. Mladen Mešter - All Rights Reserved"
+
+registers:
+  #---------------------------------------------------------------------------
+  # Control Register
+  #---------------------------------------------------------------------------
+  - name: CTRL
+    offset: 0x00
+    description: "Communication Controller Control Register"
+    access: RW
+    reset: 0x00000101
+    fields:
+      - name: ENABLE
+        bits: [0]
+        description: "Enable communication controller (1=enabled)"
+        reset: 1
+        
+      - name: FORCE_FAILOVER
+        bits: [1]
+        description: "Force manual failover when set"
+        reset: 0
+        
+      - name: FORCE_LINK
+        bits: [4, 2]
+        description: "Link to use when FORCE_FAILOVER=1 (001=FSO, 010=E-band, 100=HF)"
+        reset: 1
+        
+      - name: CRYPTO_ENABLE
+        bits: [8]
+        description: "Enable AES-256-GCM encryption (1=enabled)"
+        reset: 1
+        
+      - name: MESH_ENABLE
+        bits: [9]
+        description: "Enable mesh routing (1=enabled)"
+        reset: 0
+
+  #---------------------------------------------------------------------------
+  # Status Register
+  #---------------------------------------------------------------------------
+  - name: STATUS
+    offset: 0x04
+    description: "Communication Controller Status (Read-Only)"
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: ACTIVE_LINK
+        bits: [2, 0]
+        description: "Currently active link (one-hot: FSO, E-band, HF)"
+        
+      - name: FSO_HEALTHY
+        bits: [8]
+        description: "FSO link passing health checks"
+        
+      - name: EBAND_HEALTHY
+        bits: [9]
+        description: "E-band link passing health checks"
+        
+      - name: HF_HEALTHY
+        bits: [10]
+        description: "HF link passing health checks"
+        
+      - name: FSO_PHY_UP
+        bits: [12]
+        description: "FSO physical layer link up"
+        
+      - name: EBAND_PHY_UP
+        bits: [13]
+        description: "E-band physical layer link up"
+        
+      - name: HF_PHY_UP
+        bits: [14]
+        description: "HF physical layer link up"
+        
+      - name: FAILOVER_ACTIVE
+        bits: [16]
+        description: "Failover in progress"
+        
+      - name: FAILOVER_REASON
+        bits: [23, 20]
+        description: "Reason for last failover (0=none, 1=packet_loss, 2=link_down, 3=timeout, 4=manual)"
+        
+      - name: ALL_LINKS_DOWN
+        bits: [31]
+        description: "All communication links degraded"
+
+  #---------------------------------------------------------------------------
+  # FSO Statistics
+  #---------------------------------------------------------------------------
+  - name: FSO_STATS
+    offset: 0x08
+    description: "FSO Link Statistics"
+    access: RO
+    fields:
+      - name: PACKET_LOSS
+        bits: [7, 0]
+        description: "Packet loss percentage (0-100)"
+        
+      - name: LATENCY_US
+        bits: [23, 8]
+        description: "Round-trip latency in microseconds"
+        
+      - name: LINK_QUALITY
+        bits: [31, 24]
+        description: "Link quality score (0-100, 100=best)"
+
+  #---------------------------------------------------------------------------
+  # E-band Statistics
+  #---------------------------------------------------------------------------
+  - name: EBAND_STATS
+    offset: 0x0C
+    description: "E-band Link Statistics"
+    access: RO
+    fields:
+      - name: PACKET_LOSS
+        bits: [7, 0]
+        description: "Packet loss percentage (0-100)"
+        
+      - name: LATENCY_US
+        bits: [23, 8]
+        description: "Round-trip latency in microseconds"
+        
+      - name: LINK_QUALITY
+        bits: [31, 24]
+        description: "Link quality score (0-100)"
+
+  #---------------------------------------------------------------------------
+  # HF Statistics  
+  #---------------------------------------------------------------------------
+  - name: HF_STATS
+    offset: 0x10
+    description: "HF Link Statistics"
+    access: RO
+    fields:
+      - name: PACKET_LOSS
+        bits: [7, 0]
+        description: "Packet loss percentage (0-100)"
+        
+      - name: LATENCY_MS
+        bits: [23, 8]
+        description: "Round-trip latency in milliseconds (HF is slower)"
+        
+      - name: LINK_QUALITY
+        bits: [31, 24]
+        description: "Link quality score (0-100)"
+
+  #---------------------------------------------------------------------------
+  # Failover Configuration
+  #---------------------------------------------------------------------------
+  - name: FAILOVER_CFG
+    offset: 0x14
+    description: "Failover Threshold Configuration"
+    access: RW
+    reset: 0x00641450
+    fields:
+      - name: FAILOVER_THRESHOLD
+        bits: [7, 0]
+        description: "Packet loss % to trigger failover (default 80)"
+        reset: 80
+        
+      - name: FAILBACK_THRESHOLD
+        bits: [15, 8]
+        description: "Packet loss % to allow failback (default 20)"
+        reset: 20
+        
+      - name: MONITOR_INTERVAL_MS
+        bits: [31, 16]
+        description: "Health check interval in ms (default 100)"
+        reset: 100
+
+  #---------------------------------------------------------------------------
+  # FSM State (Debug)
+  #---------------------------------------------------------------------------
+  - name: FSM_STATE
+    offset: 0x18
+    description: "Failover FSM Current State (Debug)"
+    access: RO
+    fields:
+      - name: CURRENT_STATE
+        bits: [3, 0]
+        description: "FSM state code"
+        
+      - name: PREV_STATE
+        bits: [7, 4]
+        description: "Previous FSM state"
+        
+      - name: STATE_TIMER
+        bits: [31, 16]
+        description: "Time in current state (ms)"
+
+  #---------------------------------------------------------------------------
+  # Node Configuration
+  #---------------------------------------------------------------------------
+  - name: NODE_CFG
+    offset: 0x20
+    description: "Node Identity Configuration"
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: NODE_ID
+        bits: [3, 0]
+        description: "This node's ID (0-15)"
+        
+      - name: TOTAL_NODES
+        bits: [7, 4]
+        description: "Total nodes in mesh"
+        
+      - name: IS_MASTER
+        bits: [8]
+        description: "This node is mesh master"
+
+  #---------------------------------------------------------------------------
+  # Packet Counters
+  #---------------------------------------------------------------------------
+  - name: RX_PKT_CNT
+    offset: 0x30
+    description: "Total Received Packets (all links)"
+    access: RO
+    fields:
+      - name: COUNT
+        bits: [31, 0]
+        description: "Packet count"
+
+  - name: TX_PKT_CNT
+    offset: 0x34
+    description: "Total Transmitted Packets (all links)"
+    access: RO
+    fields:
+      - name: COUNT
+        bits: [31, 0]
+        description: "Packet count"
+
+  - name: ERR_PKT_CNT
+    offset: 0x38
+    description: "Total Error Packets"
+    access: RO
+    fields:
+      - name: COUNT
+        bits: [31, 0]
+        description: "Error packet count"
+
+  #---------------------------------------------------------------------------
+  # Crypto Key Registers (Write-Only for security)
+  #---------------------------------------------------------------------------
+  - name: CRYPTO_KEY_0
+    offset: 0x40
+    description: "AES-256 Key Word 0 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [31:0]"
+
+  - name: CRYPTO_KEY_1
+    offset: 0x44
+    description: "AES-256 Key Word 1 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [63:32]"
+
+  - name: CRYPTO_KEY_2
+    offset: 0x48
+    description: "AES-256 Key Word 2 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [95:64]"
+
+  - name: CRYPTO_KEY_3
+    offset: 0x4C
+    description: "AES-256 Key Word 3 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [127:96]"
+
+  - name: CRYPTO_KEY_4
+    offset: 0x50
+    description: "AES-256 Key Word 4 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [159:128]"
+
+  - name: CRYPTO_KEY_5
+    offset: 0x54
+    description: "AES-256 Key Word 5 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [191:160]"
+
+  - name: CRYPTO_KEY_6
+    offset: 0x58
+    description: "AES-256 Key Word 6 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [223:192]"
+
+  - name: CRYPTO_KEY_7
+    offset: 0x5C
+    description: "AES-256 Key Word 7 (Write-Only)"
+    access: WO
+    fields:
+      - name: KEY_WORD
+        bits: [31, 0]
+        description: "Key bits [255:224]"
+
+  #---------------------------------------------------------------------------
+  # Version
+  #---------------------------------------------------------------------------
+  - name: VERSION
+    offset: 0xFC
+    description: "IP Core Version"
+    access: RO
+    reset: 0x02000000
+    fields:
+      - name: PATCH
+        bits: [7, 0]
+        description: "Patch version"
+        reset: 0
+        
+      - name: MINOR
+        bits: [15, 8]
+        description: "Minor version"
+        reset: 0
+        
+      - name: MAJOR
+        bits: [23, 16]
+        description: "Major version"
+        reset: 2
+        
+      - name: RESERVED
+        bits: [31, 24]
+        description: "Reserved"
+        reset: 0
