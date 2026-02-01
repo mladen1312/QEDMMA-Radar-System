@@ -1,0 +1,22 @@
+# QEDMMA v2.0 Fusion Engine Testbench Makefile
+
+TOPLEVEL_LANG = verilog
+
+SIM ?= verilator
+WAVES ?= 1
+
+VERILOG_SOURCES = \
+    $(PWD)/../rtl/track_fusion_engine.sv \
+    $(PWD)/../rtl/track_database.sv \
+    $(PWD)/../rtl/external_track_adapter.sv
+
+TOPLEVEL = track_fusion_engine
+
+MODULE = test_track_fusion
+
+# Verilator specific settings
+EXTRA_ARGS += --trace --trace-structs
+EXTRA_ARGS += -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+EXTRA_ARGS += -DMAX_TRACKS=1024
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
