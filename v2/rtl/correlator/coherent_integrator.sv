@@ -12,7 +12,7 @@
 //   Accumulates N correlation results to achieve additional
 //   processing gain of 10*log10(N) dB.
 //
-//   Architecture Decision (Grok-X Response):
+//   Architecture Decision (Architecture Decision):
 //   - PRBS-20 requires 1821 BRAM (ZU47DR has only 1080)
 //   - Solution: PRBS-15 (45.2 dB) + 7 integrations = 53.7 dB
 //   - With quantum (+18.2 dB) and ECCM (+8.4 dB) = 80.3 dB total
