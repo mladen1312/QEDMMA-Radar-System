@@ -1,0 +1,143 @@
+#=============================================================================
+# QEDMMA v3.2 - GitLab CI/CD Pipeline
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026
+#
+# Stages: lint → sim → synth → impl → deploy
+#=============================================================================
+
+stages:
+  - lint
+  - sim
+  - synth
+  - impl
+  - deploy
+
+variables:
+  VIVADO_VERSION: "2024.1"
+  VIVADO_PATH: "/opt/Xilinx/Vivado/${VIVADO_VERSION}"
+  PART: "xczu47dr-2ffvg1517e"
+  TOP_MODULE: "qedmma_correlator_iq_wrapper"
+
+#-----------------------------------------------------------------------------
+# Lint Stage
+#-----------------------------------------------------------------------------
+lint:verilator:
+  stage: lint
+  image: verilator/verilator:v5.024
+  script:
+    - echo "Running Verilator lint..."
+    - verilator --lint-only -Wall -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+        v2/rtl/correlator/qedmma_correlator_bank_v32_core.sv
+        v2/rtl/correlator/qedmma_correlator_piso_axi.sv
+        v2/rtl/correlator/qedmma_correlator_iq_wrapper.sv
+  allow_failure: false
+
+lint:svlint:
+  stage: lint
+  image: ghcr.io/dalance/svlint:latest
+  script:
+    - echo "Running SVLint..."
+    - svlint v2/rtl/correlator/*.sv
+  allow_failure: true
+
+#-----------------------------------------------------------------------------
+# Simulation Stage
+#-----------------------------------------------------------------------------
+sim:cocotb:
+  stage: sim
+  image: verilator/verilator:v5.024
+  before_script:
+    - pip install cocotb cocotb-test pytest numpy
+  script:
+    - cd sim/cocotb
+    - make SIM=verilator
+  artifacts:
+    paths:
+      - sim/cocotb/results.xml
+      - sim/cocotb/*.vcd
+    reports:
+      junit: sim/cocotb/results.xml
+  allow_failure: false
+
+sim:unit_tests:
+  stage: sim
+  image: python:3.11
+  before_script:
+    - pip install numpy scipy pytest
+  script:
+    - pytest sim/waveform/ -v --tb=short
+  allow_failure: true
+
+#-----------------------------------------------------------------------------
+# Synthesis Stage
+#-----------------------------------------------------------------------------
+synth:vivado:
+  stage: synth
+  tags:
+    - vivado
+    - fpga
+  script:
+    - source ${VIVADO_PATH}/settings64.sh
+    - cd build/vivado
+    - vivado -mode batch -source build_qedmma_v32.tcl -tclargs synth_only
+  artifacts:
+    paths:
+      - build/vivado/build/synth_*.rpt
+      - build/vivado/build/*.xpr
+    expire_in: 1 week
+  allow_failure: false
+
+#-----------------------------------------------------------------------------
+# Implementation Stage
+#-----------------------------------------------------------------------------
+impl:vivado:
+  stage: impl
+  tags:
+    - vivado
+    - fpga
+  needs:
+    - synth:vivado
+  script:
+    - source ${VIVADO_PATH}/settings64.sh
+    - cd build/vivado
+    - vivado -mode batch -source build_qedmma_v32.tcl -tclargs impl_only
+  artifacts:
+    paths:
+      - build/vivado/build/*.bit
+      - build/vivado/build/impl_*.rpt
+    expire_in: 1 month
+  allow_failure: false
+
+#-----------------------------------------------------------------------------
+# Deploy Stage
+#-----------------------------------------------------------------------------
+deploy:jtag:
+  stage: deploy
+  tags:
+    - jtag
+    - zu47dr
+  needs:
+    - impl:vivado
+  script:
+    - source ${VIVADO_PATH}/settings64.sh
+    - vivado -mode batch -source deploy/scripts/flash_jtag.tcl
+        -tclargs -bit build/vivado/build/qedmma_v32.bit -verify
+  when: manual
+  allow_failure: true
+
+deploy:release:
+  stage: deploy
+  needs:
+    - impl:vivado
+  script:
+    - mkdir -p release/v3.2
+    - cp build/vivado/build/qedmma_v32.bit release/v3.2/
+    - cp build/vivado/build/*.rpt release/v3.2/
+    - tar -czvf qedmma_v32_release.tar.gz release/
+  artifacts:
+    paths:
+      - qedmma_v32_release.tar.gz
+    expire_in: 6 months
+  only:
+    - tags
