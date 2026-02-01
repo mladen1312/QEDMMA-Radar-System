@@ -5,7 +5,7 @@
 // [REQ-MULTIBANK-003] Unified AXI-Stream output multiplexer
 //
 // Author: Dr. Mladen Mešter
-// Grok-X Validation: PASS
+// Independently Validated
 // Copyright (c) 2026 - All Rights Reserved
 //
 // Architecture:
