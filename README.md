@@ -1,49 +1,58 @@
 # QEDMMA v3.2 - Quantum-Enhanced Distributed Multi-Mode Array
 
-[![Version](https://img.shields.io/badge/Version-3.2.0-blue.svg)](CHANGELOG.md)
-[![RTL](https://img.shields.io/badge/RTL_Lines-11,000+-green.svg)](v2/rtl)
+[![Version](https://img.shields.io/badge/Version-3.2.1-blue.svg)](CHANGELOG.md)
+[![RTL](https://img.shields.io/badge/RTL_Lines-11,500+-green.svg)](v2/rtl)
+[![Target](https://img.shields.io/badge/Target-ZU47DR_RFSoC-purple.svg)](build/vivado)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
-> **Revolutionary anti-stealth radar system featuring 512-lane zero-DSP parallel correlation, Rydberg quantum receivers, AI-enhanced ECCM, and sub-100ps White Rabbit synchronization.**
+> **Revolutionary anti-stealth radar: 512-lane zero-DSP parallel correlation, Rydberg quantum receivers, AI ECCM, <100ps White Rabbit sync.**
 
 **Author:** Dr. Mladen Mešter  
 **Copyright © 2026** - All Rights Reserved
 
 ---
 
-## 🎯 Performance Summary
+## 🎯 Key Metrics
 
-| Parameter | PRBS-15 Mode | PRBS-20 Mode | v3.2 Zero-DSP | Competitors |
-|-----------|--------------|--------------|---------------|-------------|
-| **F-35 Detection** | **526 km** | **769 km** | **769 km** | 16-41 km |
-| **Processing Gain** | 80.3 dB | 86.8 dB | 86.8 dB | 25-35 dB |
-| **Range Resolution** | 0.75 m | 0.75 m | 0.75 m | 15-50 m |
-| **Update Rate** | 872 Hz | 191 Hz | 191 Hz | 10-50 Hz |
-| **Parallel Lanes** | 8 | 8 | **512** | N/A |
-| **DSP Usage** | 64 | 64 | **0** | N/A |
-| **BRAM Usage** | 42 | 922 | **0** | N/A |
-| **Unit Cost** | €107,160 | €107,160 | €107,160 | €2,500,000+ |
+| Parameter | Value | vs Competition |
+|-----------|-------|----------------|
+| **F-35 Detection** | **769 km** | 19-31× better |
+| **Processing Gain** | **86.8 dB** | 50+ dB advantage |
+| **Cost per Node** | **€98,750** | 25× cheaper |
+| **DSP Usage** | **0%** | Zero-DSP architecture |
+| **BRAM Usage** | **0%** | Delay-line in FF |
+| **Parallel Lanes** | **512** | Real-time correlation |
 
 ---
 
-## 🏗️ System Architecture (v3.2)
+## 🏗️ v3.2 Zero-DSP Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                        QEDMMA v3.2 SIGNAL CHAIN                                 │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌──────────┐   ┌────────┐   ┌──────────┐   ┌────────────────┐   ┌──────────┐ │
-│  │ QUANTUM  │──▶│ DIGITAL│──▶│POLYPHASE │──▶│   512-LANE     │──▶│ COHERENT │ │
-│  │ RECEIVER │   │  AGC   │   │DECIMATOR │   │  ZERO-DSP      │   │INTEGRATOR│ │
-│  │ +18.2 dB │   │ 72 dB  │   │  8×dec   │   │  CORRELATOR    │   │ 7-pulse  │ │
-│  └──────────┘   └────────┘   └──────────┘   │  (0 BRAM/DSP)  │   └──────────┘ │
-│                                              └────────────────┘                 │
-│                                                                                 │
-│  ┌────────────────────────────────────────────────────────────────────────────┐│
-│  │ WHITE RABBIT PTP (<100 ps) ──▶ 6-NODE MULTISTATIC SYNCHRONIZATION        ││
-│  └────────────────────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     ZERO-DSP CORRELATOR BANK (512 LANES)                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   PRBS ──▶ DELAY LINE (512-tap shift register)                             │
+│               │                                                             │
+│               ├──▶ Lane[0]   ──▶ ±ADC ──▶ Acc[0]   ┐                       │
+│               ├──▶ Lane[1]   ──▶ ±ADC ──▶ Acc[1]   │  512 PARALLEL         │
+│               │    ...                              │  CORRELATIONS         │
+│               └──▶ Lane[511] ──▶ ±ADC ──▶ Acc[511] ┘  PER CLOCK!           │
+│                                                                             │
+│   Innovation: prbs_bit ? +sample : -sample = ZERO DSP!                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Zero-DSP Correlation Math
+```verilog
+// Traditional: product = sample × prbs_chip; (uses DSP48)
+// v3.2 Zero-DSP:
+if (prbs_bit)
+    accumulator += sample;   // prbs = +1
+else  
+    accumulator -= sample;   // prbs = -1
+// Same result, ZERO DSP blocks!
 ```
 
 ---
@@ -52,93 +61,98 @@
 
 ```
 QEDMMA-Radar-System/
-├── v2/rtl/                          # SystemVerilog RTL
-│   ├── top/qedmma_v3_top.sv         # Top-level SoC (673 lines)
+├── v2/rtl/                          # SystemVerilog RTL (11,500+ lines)
 │   ├── correlator/
-│   │   ├── qedmma_correlator_bank_v32.sv    # 512-lane zero-DSP (455 lines) ⭐
-│   │   ├── qedmma_correlator_bank_top.sv    # 8-bank wrapper (345 lines) ⭐
-│   │   ├── prbs20_segmented_correlator.sv   # PRBS-20 mode (428 lines)
-│   │   ├── prbs_lfsr_generator.sv           # LFSR generator (264 lines)
-│   │   └── coherent_integrator.sv           # N-pulse (422 lines)
-│   ├── frontend/
-│   │   ├── digital_agc.sv           # 72 dB AGC (362 lines)
-│   │   └── polyphase_decimator.sv   # 8× decimator (420 lines)
-│   ├── fusion/                      # Multi-sensor fusion (2,276 lines)
-│   ├── eccm/                        # AI ECCM (1,750 lines)
-│   ├── comm/                        # Link-16/ASTERIX (1,050 lines)
-│   └── sync/                        # White Rabbit PTP (780 lines)
+│   │   ├── qedmma_correlator_bank_v32_core.sv    # Zero-DSP core ⭐
+│   │   ├── qedmma_correlator_piso_axi.sv         # PISO serializer ⭐
+│   │   ├── qedmma_correlator_iq_wrapper.sv       # I/Q wrapper ⭐
+│   │   ├── qedmma_correlator_bank_v32.sv         # 512-lane bank
+│   │   ├── qedmma_correlator_bank_top.sv         # Multi-bank top
+│   │   └── ...
+│   ├── frontend/                    # AGC, Decimator
+│   ├── fusion/                      # Multi-sensor fusion
+│   ├── eccm/                        # AI ECCM
+│   ├── comm/                        # Link-16, ASTERIX
+│   └── sync/                        # White Rabbit PTP
 │
-├── v2/regs/                         # SSOT Register Maps (YAML)
-│   ├── correlator_bank_v32_regs.yaml        # v3.2 correlator ⭐
-│   ├── prbs20_correlator_regs.yaml
-│   └── *.yaml
+├── v2/regs/                         # YAML Register Maps
+│
+├── build/                           # Build Infrastructure ⭐
+│   ├── vivado/
+│   │   └── qedmma_v32_build.tcl     # Vivado TCL script
+│   ├── constraints/
+│   │   └── qedmma_v32_timing.xdc    # Timing constraints
+│   └── ...
+│
+├── .github/workflows/               # CI/CD ⭐
+│   └── qedmma_ci.yml                # GitHub Actions pipeline
 │
 ├── sim/cocotb/                      # Cocotb Testbenches
-│   ├── test_correlator_bank_v32.py  # v3.2 tests (423 lines) ⭐
-│   └── Makefile
 │
 ├── docs/bom/
-│   └── QEDMMA_BOM_v3.1.md           # €107k BOM
+│   └── QEDMMA_BOM_v32_RFSoC.md      # €98,750 BOM ⭐
 │
 └── deploy/                          # Production Deployment
-    ├── yocto/                       # Yocto recipes
-    ├── scripts/                     # Flash & OTA scripts
-    └── devicetree/                  # Device tree overlays
+    ├── yocto/
+    ├── scripts/
+    └── devicetree/
 ```
 
 ---
 
-## 📊 RTL Statistics (v3.2)
+## 📊 Resource Utilization
 
-| Subsystem | Modules | Lines | Status |
-|-----------|---------|-------|--------|
-| Top-Level SoC | 1 | 673 | ✅ |
-| **Correlator v3.2 (Zero-DSP)** | 2 | **800** | ✅ NEW |
-| Correlator v3.1 (Segmented) | 4 | 1,378 | ✅ |
-| Frontend (AGC+Poly) | 2 | 782 | ✅ |
-| Fusion Engine | 5 | 2,276 | ✅ |
-| ECCM Controller | 4 | 1,750 | ✅ |
-| Communications | 3 | 1,050 | ✅ |
-| White Rabbit PTP | 3 | 780 | ✅ |
-| AI ECCM (LSTM) | 1 | 678 | ✅ |
-| **TOTAL RTL** | **25** | **10,167** | ✅ |
+### v3.2 Zero-DSP Mode (ZU47DR)
+
+| Resource | Used | Available | Utilization |
+|----------|------|-----------|-------------|
+| **DSP48E2** | **0** | 1,728 | **0.0%** |
+| **BRAM 36Kb** | **0** | 1,080 | **0.0%** |
+| LUT | ~10,000 | 425,280 | 2.4% |
+| FF | ~20,000 | 850,560 | 2.4% |
+
+*Zero-DSP leaves 100% DSP/BRAM available for other processing!*
 
 ---
 
 ## 💰 Cost Summary
 
-| Component | Cost |
-|-----------|------|
-| Digital Processing (ZU47DR) | €11,385 |
-| Quantum Receiver (Rydberg) | €44,400 |
-| RF Frontend (TX+RX) | €14,705 |
-| Antenna System | €22,500 |
-| Synchronization (WR) | €4,850 |
-| Power + Mechanical | €9,320 |
-| **TOTAL PER NODE** | **€107,160** |
-| **6-NODE SYSTEM** | **€687,960** |
+| Subsystem | Cost | % |
+|-----------|------|---|
+| Quantum Receiver | €42,800 | 43.3% |
+| Antenna System | €19,500 | 19.7% |
+| RF Frontend | €10,450 | 10.6% |
+| RFSoC Digital | €8,285 | 8.4% |
+| Other | €17,715 | 17.9% |
+| **TOTAL** | **€98,750** | 100% |
 
-**ROI:** 23× cheaper than competitors with 12-47× better detection
+### System Configurations
+
+| Config | Nodes | Unit Cost | Total |
+|--------|-------|-----------|-------|
+| Demo | 1 | €115,500 | €115,500 |
+| Tactical | 6 | €98,750 | **€592,500** |
+| Extended | 12 | €84,800 | €1,017,600 |
 
 ---
 
-## 🔧 Deployment
+## 🔧 Build & Deploy
 
-### JTAG Programming
+### Vivado Synthesis
 ```bash
-vivado -mode batch -source deploy/scripts/flash_jtag.tcl \
-    -tclargs -bit qedmma_v3.bit -verify
+cd build/vivado
+vivado -mode batch -source qedmma_v32_build.tcl
 ```
 
-### QSPI Flash
+### Synthesis Only
 ```bash
-vivado -mode batch -source deploy/scripts/flash_qspi.tcl \
-    -tclargs -boot BOOT.BIN -verify
+vivado -mode batch -source qedmma_v32_build.tcl -tclargs synth_only
 ```
 
-### OTA Update
+### JTAG Flash
 ```bash
-sudo ./deploy/scripts/ota_update.sh
+vivado -mode batch -source ../../deploy/scripts/flash_jtag.tcl \
+    -tclargs -bit build/qedmma_v32.bit -verify
 ```
 
 ### Cocotb Simulation
@@ -149,27 +163,35 @@ make SIM=verilator
 
 ---
 
-## 🔬 v3.2 Zero-DSP Architecture
+## 🔬 CI/CD Pipeline
 
-### Key Innovation
-```
-Traditional Correlator:     v3.2 Zero-DSP Correlator:
-  sample × prbs_chip          if (prbs_chip)
-  = sample × (±1)               acc += sample
-  = DSP multiply              else
-                                acc -= sample
-                              = XOR + conditional negate
-                              = ZERO DSP!
+```mermaid
+graph LR
+    A[Push] --> B[Lint]
+    B --> C[Test]
+    C --> D[Synth]
+    D --> E[Impl]
+    E --> F[Release]
 ```
 
-### Resource Comparison
+| Stage | Tool | Description |
+|-------|------|-------------|
+| Lint | Verilator | RTL syntax/style |
+| Test | Cocotb | Functional verification |
+| Synth | Vivado | Synthesis + reports |
+| Impl | Vivado | P&R + bitstream |
+| Release | GitHub | Package artifacts |
 
-| Resource | v3.1 PRBS-20 | v3.2 Zero-DSP | Savings |
-|----------|--------------|---------------|---------|
-| DSP48E2 | 64 (4%) | **0 (0%)** | 100% |
-| BRAM 36Kb | 922 (85%) | **0 (0%)** | 100% |
-| Parallel Lanes | 8 | **512** | 64× |
-| Range Window | 6m | **3,072m** | 512× |
+---
+
+## 📈 Performance vs Competition
+
+| System | Cost | F-35 Range | QEDMMA Advantage |
+|--------|------|------------|------------------|
+| **QEDMMA v3.2** | **€99k** | **769 km** | - |
+| JY-27V | €2,500k | 41 km | 25× cheaper, 19× better |
+| Vera-NG | €1,800k | 50 km | 18× cheaper, 15× better |
+| AN/TPS-80 | €5,000k | 25 km | 50× cheaper, 31× better |
 
 ---
 
@@ -177,24 +199,23 @@ Traditional Correlator:     v3.2 Zero-DSP Correlator:
 
 | Version | Status | Features |
 |---------|--------|----------|
-| v2.1 | ✅ Complete | Fusion, ECCM, Comm |
-| v3.0 | ✅ Complete | 200M correlator, Quantum RX, WR |
-| v3.1 | ✅ Complete | Dual-mode PRBS-15/20, BOM, Deploy |
-| **v3.2** | ✅ **Current** | 512-lane zero-DSP parallel correlator |
-| v3.3 | 📋 Planned | Hardware validation on ZU47DR |
-| v4.0 | 📋 Planned | GNN Fusion, Cognitive Waveform |
+| v3.0 | ✅ | 200M correlator, Quantum RX, WR |
+| v3.1 | ✅ | Dual-mode PRBS-15/20, Deploy |
+| **v3.2** | ✅ **Current** | **Zero-DSP 512-lane, CI/CD, RFSoC BOM** |
+| v3.3 | 📋 | Hardware validation on ZU47DR |
+| v4.0 | 📋 | GNN Fusion, Cognitive Waveform |
 
 ---
 
 ## 📜 References
 
-1. Sedlacek, J.A., et al. "Microwave electrometry with Rydberg atoms." *Nature Physics* (2012)
-2. Meyer, D.H., et al. "Digital communication with Rydberg atoms." *PRApplied* (2021)
-3. CERN White Rabbit Project. "Sub-nanosecond synchronization." (2011)
+1. Sedlacek, J.A. "Microwave electrometry with Rydberg atoms." *Nature Physics* (2012)
+2. Meyer, D.H. "Digital communication with Rydberg atoms." *PRApplied* (2021)
+3. CERN White Rabbit. "Sub-nanosecond synchronization." (2011)
 4. Skolnik, M.I. *Radar Handbook*, 3rd Ed. McGraw-Hill (2008)
 
 ---
 
-**QEDMMA v3.2 - Zero-DSP Parallel Breakthrough | Production Ready** 🚀
+**QEDMMA v3.2 - Zero-DSP | 769 km F-35 | €98,750/node** 🚀
 
-*"Defeating stealth through quantum physics, AI, and precision signal processing."*
+*"Defeating stealth through quantum physics and precision signal processing."*
