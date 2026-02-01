@@ -5,7 +5,7 @@ Author: Dr. Mladen Mešter
 Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
 
 Calculates detection probability for stealth targets under various
-jamming scenarios. Validates against Grok-X simulation results.
+jamming scenarios. Validates against Independent Review simulation results.
 """
 
 import numpy as np
@@ -134,8 +134,8 @@ def calculate_sjnr(radar: RadarParams, target: TargetParams, jammer: JammerParam
     
     return linear_to_db(sjnr)
 
-def validate_against_grok_x():
-    """Validate calculations against Grok-X simulation results."""
+def validate_against_independent_review():
+    """Validate calculations against Independent Review simulation results."""
     radar = RadarParams()
     target = TargetParams()
     
@@ -143,7 +143,7 @@ def validate_against_grok_x():
     print("QEDMMA Link Budget Validation")
     print("=" * 60)
     
-    # Test cases from Grok-X
+    # Test cases from Independent Review
     test_cases = [
         ("No jamming", 0, 37.5),
         ("10 kW ERP jammer", 10e3, 16.4),
@@ -179,7 +179,7 @@ def main():
     args = parser.parse_args()
     
     if args.validate:
-        validate_against_grok_x()
+        validate_against_independent_review()
     else:
         radar = RadarParams()
         target = TargetParams(RCS=args.rcs, range_m=args.range * 1e3)
