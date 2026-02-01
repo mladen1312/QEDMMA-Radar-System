@@ -1,0 +1,199 @@
+# QEDMMA v3.0 - White Rabbit PTP Register Map
+# [REQ-SYNC-001] Sub-100 ps synchronization
+# Author: Dr. Mladen Mešter
+
+module_name: white_rabbit_ptp
+base_address: 0x00060000
+version: "1.0.0"
+description: "White Rabbit Precision Time Protocol registers for multistatické synchronization"
+
+registers:
+  # Control Register
+  - name: CTRL
+    offset: 0x000
+    access: RW
+    reset: 0x00000000
+    description: "WR PTP Control"
+    fields:
+      - name: enable
+        bits: [0]
+        description: "Enable WR PTP core"
+      - name: master_mode
+        bits: [1]
+        description: "1=Master, 0=Slave"
+      - name: soft_reset
+        bits: [2]
+        description: "Soft reset (self-clearing)"
+      - name: force_lock
+        bits: [3]
+        description: "Force lock state (debug)"
+      - name: toa_enable
+        bits: [8:15]
+        description: "ToA channel enables (8 channels)"
+
+  # Status Register
+  - name: STATUS
+    offset: 0x004
+    access: RO
+    description: "WR PTP Status"
+    fields:
+      - name: locked
+        bits: [0]
+        description: "WR locked to master"
+      - name: tracking
+        bits: [1]
+        description: "Servo in tracking mode"
+      - name: holdover
+        bits: [2]
+        description: "In holdover (lost sync)"
+      - name: link_up
+        bits: [3]
+        description: "Ethernet link up"
+      - name: servo_state
+        bits: [6:4]
+        description: "Servo FSM state"
+      - name: phase_valid
+        bits: [7]
+        description: "DMTD phase measurement valid"
+
+  # TAI Seconds (Low)
+  - name: TAI_SEC_LO
+    offset: 0x008
+    access: RO
+    description: "TAI seconds [31:0]"
+
+  # TAI Seconds (High)
+  - name: TAI_SEC_HI
+    offset: 0x00C
+    access: RO
+    description: "TAI seconds [47:32]"
+
+  # TAI Nanoseconds
+  - name: TAI_NS
+    offset: 0x010
+    access: RO
+    description: "TAI nanoseconds [29:0]"
+
+  # TAI Fractional Nanoseconds
+  - name: TAI_FRAC
+    offset: 0x014
+    access: RO
+    description: "Sub-nanosecond fraction [27:0]"
+
+  # Offset from Master
+  - name: OFFSET_NS
+    offset: 0x018
+    access: RO
+    description: "Offset from master (signed, ns)"
+
+  # Round-Trip Time
+  - name: RTT_NS
+    offset: 0x01C
+    access: RO
+    description: "Round-trip time (ns)"
+
+  # DMTD Phase
+  - name: DMTD_PHASE
+    offset: 0x020
+    access: RO
+    description: "DMTD phase measurement [27:0]"
+
+  # DAC Value
+  - name: DAC_VALUE
+    offset: 0x024
+    access: RO
+    description: "Current VCXO DAC value"
+
+  # Servo Proportional Gain
+  - name: SERVO_KP
+    offset: 0x028
+    access: RW
+    reset: 0x00001000
+    description: "Servo P gain (Q16.16)"
+
+  # Servo Integral Gain
+  - name: SERVO_KI
+    offset: 0x02C
+    access: RW
+    reset: 0x00000100
+    description: "Servo I gain (Q16.16)"
+
+  # UTC Offset
+  - name: UTC_OFFSET
+    offset: 0x030
+    access: RW
+    reset: 0x00000025
+    description: "TAI-UTC offset (seconds, currently 37)"
+
+  # Lock Threshold
+  - name: LOCK_THRESHOLD
+    offset: 0x034
+    access: RW
+    reset: 0x00000064
+    description: "Lock detection threshold (ps)"
+
+  # ToA Channel 0-7 Timestamps (read FIFO)
+  - name: TOA_CH0_TS_LO
+    offset: 0x100
+    access: RO
+    description: "ToA Channel 0 timestamp [31:0] (FIFO read)"
+
+  - name: TOA_CH0_TS_HI
+    offset: 0x104
+    access: RO
+    description: "ToA Channel 0 timestamp [79:32]"
+
+  - name: TOA_CH0_FINE
+    offset: 0x108
+    access: RO
+    description: "ToA Channel 0 fine phase [11:0]"
+
+  - name: TOA_CH0_STATUS
+    offset: 0x10C
+    access: RO
+    description: "ToA Channel 0 FIFO status"
+    fields:
+      - name: fifo_count
+        bits: [5:0]
+        description: "Entries in FIFO"
+      - name: fifo_empty
+        bits: [6]
+        description: "FIFO empty"
+      - name: fifo_overflow
+        bits: [7]
+        description: "FIFO overflow (sticky)"
+
+  # Repeat for channels 1-7 (offset +0x10 per channel)
+  - name: TOA_CH1_TS_LO
+    offset: 0x110
+    access: RO
+    description: "ToA Channel 1 timestamp [31:0]"
+
+  # ... (channels 2-7 follow same pattern)
+
+  # Capture Count
+  - name: CAPTURE_COUNT
+    offset: 0x1F0
+    access: RO
+    description: "Total ToA captures"
+
+  # Lock Count
+  - name: LOCK_COUNT
+    offset: 0x1F4
+    access: RO
+    description: "Lock acquisition count"
+
+  # Version
+  - name: VERSION
+    offset: 0x1FC
+    access: RO
+    reset: 0x01000001
+    description: "Core version (v1.0.0 build 1)"
+
+# Performance specifications
+specifications:
+  sync_accuracy_ps: 100          # <100 ps synchronization
+  phase_resolution_ps: 10        # DMTD phase resolution
+  max_nodes: 32                  # Maximum synchronized nodes
+  holdover_stability_ppb: 100    # Holdover drift rate
+  acquisition_time_ms: 500       # Time to lock
