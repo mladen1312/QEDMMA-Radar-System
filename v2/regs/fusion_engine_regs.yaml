@@ -1,0 +1,396 @@
+# QEDMMA v2.0 Fusion Engine Register Map
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 Dr. Mladen Mešter - All Rights Reserved
+#
+# SSOT: Single Source of Truth for register definitions
+# Auto-generates: .sv package, .h header, .py driver, .dts overlay
+
+module:
+  name: fusion_engine
+  description: Multi-Sensor Track Fusion Engine
+  version: "2.0.0"
+  base_address: 0x00020000
+  address_width: 16
+  data_width: 32
+  author: "Dr. Mladen Mešter"
+  copyright: "2026 Dr. Mladen Mešter"
+
+registers:
+  #---------------------------------------------------------------------------
+  # Control & Status
+  #---------------------------------------------------------------------------
+  - name: CTRL
+    offset: 0x0000
+    description: Fusion engine control register
+    access: RW
+    reset: 0x00000001
+    fields:
+      - name: ENABLE
+        bits: 0
+        description: Enable fusion engine
+        reset: 1
+      - name: LINK16_RX_EN
+        bits: 1
+        description: Enable Link 16 receive
+        reset: 0
+      - name: LINK16_TX_EN
+        bits: 2
+        description: Enable Link 16 transmit
+        reset: 0
+      - name: ASTERIX_EN
+        bits: 3
+        description: Enable ASTERIX parser
+        reset: 0
+      - name: IRST_EN
+        bits: 4
+        description: Enable IRST adapter
+        reset: 0
+      - name: ESM_EN
+        bits: 5
+        description: Enable ESM adapter
+        reset: 0
+      - name: ADSB_EN
+        bits: 6
+        description: Enable ADS-B receiver
+        reset: 0
+      - name: AUTO_DELETE
+        bits: 7
+        description: Auto-delete timed-out tracks
+        reset: 1
+      - name: SOFT_RESET
+        bits: 31
+        description: Soft reset (self-clearing)
+        reset: 0
+
+  - name: STATUS
+    offset: 0x0004
+    description: Fusion engine status register
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: ACTIVE_TRACKS
+        bits: 9:0
+        description: Number of active fused tracks
+      - name: DB_FULL
+        bits: 10
+        description: Track database full
+      - name: LINK16_ACTIVE
+        bits: 11
+        description: Link 16 interface active
+      - name: ASTERIX_ACTIVE
+        bits: 12
+        description: ASTERIX parser active
+      - name: FUSION_BUSY
+        bits: 13
+        description: Fusion engine busy
+      - name: ERROR
+        bits: 14
+        description: Error condition present
+      - name: READY
+        bits: 15
+        description: Engine ready for input
+
+  #---------------------------------------------------------------------------
+  # Association Configuration
+  #---------------------------------------------------------------------------
+  - name: ASSOC_CFG
+    offset: 0x0008
+    description: Track association configuration
+    access: RW
+    reset: 0x000003E8
+    fields:
+      - name: THRESHOLD
+        bits: 15:0
+        description: Mahalanobis distance threshold (squared)
+        reset: 0x03E8  # 1000
+
+  - name: TIMEOUT_CFG
+    offset: 0x000C
+    description: Track timeout configuration
+    access: RW
+    reset: 0x00007530
+    fields:
+      - name: TIMEOUT_MS
+        bits: 15:0
+        description: Track timeout in milliseconds
+        reset: 0x7530  # 30000 ms = 30 s
+
+  #---------------------------------------------------------------------------
+  # Link 16 Configuration
+  #---------------------------------------------------------------------------
+  - name: LINK16_CFG
+    offset: 0x0010
+    description: Link 16 interface configuration
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: SOURCE_TRACK_NUM
+        bits: 15:0
+        description: Own platform Source Track Number (STN)
+        reset: 0x0000
+      - name: EXERCISE_IND
+        bits: 23:16
+        description: Exercise indicator
+        reset: 0x00
+
+  - name: LINK16_STATUS
+    offset: 0x0014
+    description: Link 16 status
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: RX_MSG_COUNT
+        bits: 15:0
+        description: Received message count (lower 16 bits)
+      - name: TX_MSG_COUNT
+        bits: 31:16
+        description: Transmitted message count (lower 16 bits)
+
+  - name: LINK16_ERRORS
+    offset: 0x0018
+    description: Link 16 error counters
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: RX_ERRORS
+        bits: 15:0
+        description: Receive error count
+      - name: TX_ERRORS
+        bits: 31:16
+        description: Transmit error count
+
+  #---------------------------------------------------------------------------
+  # ASTERIX Configuration
+  #---------------------------------------------------------------------------
+  - name: ASTERIX_CFG
+    offset: 0x0020
+    description: ASTERIX parser configuration
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: SAC
+        bits: 7:0
+        description: Expected System Area Code
+        reset: 0x00
+      - name: SIC
+        bits: 15:8
+        description: Expected System Identification Code
+        reset: 0x00
+      - name: FILTER_SAC_SIC
+        bits: 16
+        description: Enable SAC/SIC filtering
+        reset: 0
+
+  - name: ASTERIX_STATUS
+    offset: 0x0024
+    description: ASTERIX parser status
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: MESSAGES_PARSED
+        bits: 15:0
+        description: Messages parsed (lower 16 bits)
+      - name: RECORDS_PARSED
+        bits: 31:16
+        description: Records parsed (lower 16 bits)
+
+  - name: ASTERIX_ERRORS
+    offset: 0x0028
+    description: ASTERIX error counter
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: PARSE_ERRORS
+        bits: 15:0
+        description: Parse error count
+
+  #---------------------------------------------------------------------------
+  # Coordinate Origin (WGS84)
+  #---------------------------------------------------------------------------
+  - name: ORIGIN_LAT
+    offset: 0x0030
+    description: WGS84 origin latitude (degrees × 1e7)
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: LAT
+        bits: 31:0
+        description: Latitude in degrees × 1e7 (signed)
+        reset: 0x00000000
+
+  - name: ORIGIN_LON
+    offset: 0x0034
+    description: WGS84 origin longitude (degrees × 1e7)
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: LON
+        bits: 31:0
+        description: Longitude in degrees × 1e7 (signed)
+        reset: 0x00000000
+
+  - name: ORIGIN_ALT
+    offset: 0x0038
+    description: WGS84 origin altitude (meters)
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: ALT
+        bits: 31:0
+        description: Altitude in meters
+        reset: 0x00000000
+
+  #---------------------------------------------------------------------------
+  # Statistics
+  #---------------------------------------------------------------------------
+  - name: FUSIONS_PERFORMED
+    offset: 0x0040
+    description: Total fusion operations performed
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Fusion count
+
+  - name: TRACKS_CREATED
+    offset: 0x0044
+    description: Total new tracks created
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track creation count
+
+  - name: TRACKS_DELETED
+    offset: 0x0048
+    description: Total tracks deleted (timeout/manual)
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track deletion count
+
+  - name: INPUT_TRACKS
+    offset: 0x004C
+    description: Total input tracks received
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Input track count
+
+  #---------------------------------------------------------------------------
+  # Source Statistics (per adapter)
+  #---------------------------------------------------------------------------
+  - name: SRC_QEDMMA_COUNT
+    offset: 0x0050
+    description: Tracks from internal QEDMMA
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track count
+
+  - name: SRC_LINK16_COUNT
+    offset: 0x0054
+    description: Tracks from Link 16
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track count
+
+  - name: SRC_ASTERIX_COUNT
+    offset: 0x0058
+    description: Tracks from ASTERIX
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track count
+
+  - name: SRC_IRST_COUNT
+    offset: 0x005C
+    description: Tracks from IRST
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track count
+
+  - name: SRC_ESM_COUNT
+    offset: 0x0060
+    description: Tracks from ESM
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track count
+
+  - name: SRC_ADSB_COUNT
+    offset: 0x0064
+    description: Tracks from ADS-B
+    access: RO
+    reset: 0x00000000
+    fields:
+      - name: COUNT
+        bits: 31:0
+        description: Track count
+
+  #---------------------------------------------------------------------------
+  # Current Time
+  #---------------------------------------------------------------------------
+  - name: CURRENT_TIME_LO
+    offset: 0x0070
+    description: Current time (GPS microseconds, lower 32 bits)
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: TIME_LO
+        bits: 31:0
+        description: Time lower 32 bits
+
+  - name: CURRENT_TIME_HI
+    offset: 0x0074
+    description: Current time (GPS microseconds, upper 32 bits)
+    access: RW
+    reset: 0x00000000
+    fields:
+      - name: TIME_HI
+        bits: 31:0
+        description: Time upper 32 bits
+
+  #---------------------------------------------------------------------------
+  # Version
+  #---------------------------------------------------------------------------
+  - name: VERSION
+    offset: 0x00FC
+    description: IP core version
+    access: RO
+    reset: 0x02000000
+    fields:
+      - name: PATCH
+        bits: 7:0
+        description: Patch version
+        reset: 0x00
+      - name: MINOR
+        bits: 15:8
+        description: Minor version
+        reset: 0x00
+      - name: MAJOR
+        bits: 23:16
+        description: Major version
+        reset: 0x02
+      - name: RESERVED
+        bits: 31:24
+        description: Reserved
+        reset: 0x00
