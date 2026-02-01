@@ -206,7 +206,6 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 ## 📧 Contact
 
 **Dr. Mladen Mešter**  
-Radar Systems Architect  
 Zagreb, Croatia
 
 *"Defeating stealth through quantum physics."*
