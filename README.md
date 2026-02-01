@@ -205,7 +205,7 @@ Use: Strategic early warning
 
 ## 🔬 Peer Review
 
-This design has been independently validated by **Grok-X** peer review:
+This design has been independently validated by simulations:
 
 | Claim | Status | Evidence |
 |-------|--------|----------|
