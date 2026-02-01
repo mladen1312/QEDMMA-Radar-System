@@ -1,0 +1,279 @@
+#=============================================================================
+# QEDMMA v3.4 - Link-16 / ASTERIX Adapter Register Map
+# [REQ-FUSION-001] Multi-sensor fusion control
+# [REQ-FUSION-002] Track correlation configuration
+#
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026 - All Rights Reserved
+#
+# Base Address: 0x4005_0000
+# Address Range: 4KB
+#=============================================================================
+
+module_name: link16_asterix_adapter
+version: "3.4.0"
+base_address: 0x40050000
+address_width: 12
+
+registers:
+  #---------------------------------------------------------------------------
+  # Control Registers
+  #---------------------------------------------------------------------------
+  - name: CTRL
+    offset: 0x000
+    access: RW
+    reset: 0x00000000
+    description: "Adapter Control Register"
+    fields:
+      - name: enable
+        bits: 0
+        description: "Enable adapter"
+      - name: link16_enable
+        bits: 1
+        description: "Enable Link-16 reception"
+      - name: asterix_enable
+        bits: 2
+        description: "Enable ASTERIX reception"
+      - name: local_enable
+        bits: 3
+        description: "Enable local track input"
+      - name: correlation_enable
+        bits: 4
+        description: "Enable track correlation"
+      - name: cueing_enable
+        bits: 5
+        description: "Enable cueing output"
+      - name: auto_handoff
+        bits: 6
+        description: "Automatic track handoff"
+
+  - name: CORRELATION_CONFIG
+    offset: 0x004
+    access: RW
+    reset: 0x00001388
+    description: "Correlation Gate Configuration"
+    fields:
+      - name: distance_gate
+        bits: [15:0]
+        description: "Correlation distance gate in meters (default 5000)"
+      - name: velocity_gate
+        bits: [23:16]
+        description: "Velocity correlation gate in m/s"
+      - name: time_gate
+        bits: [31:24]
+        description: "Time correlation gate in seconds"
+
+  - name: LINK16_CONFIG
+    offset: 0x008
+    access: RW
+    reset: 0x00000007
+    description: "Link-16 Message Filter"
+    fields:
+      - name: j2_enable
+        bits: 0
+        description: "Accept J2.x Air Track messages"
+      - name: j3_enable
+        bits: 1
+        description: "Accept J3.x Surface Track messages"
+      - name: j7_enable
+        bits: 2
+        description: "Accept J7.x Track Management messages"
+      - name: j12_enable
+        bits: 3
+        description: "Accept J12.x Command messages"
+
+  - name: ASTERIX_CONFIG
+    offset: 0x00C
+    access: RW
+    reset: 0x00004030
+    description: "ASTERIX Category Filter"
+    fields:
+      - name: cat048_enable
+        bits: 0
+        description: "Accept CAT048 Radar Track"
+      - name: cat062_enable
+        bits: 1
+        description: "Accept CAT062 SDPS Track"
+      - name: cat034_enable
+        bits: 2
+        description: "Accept CAT034 Service Messages"
+      - name: cat_filter
+        bits: [15:8]
+        description: "Specific category filter (0=accept all)"
+
+  #---------------------------------------------------------------------------
+  # Status Registers
+  #---------------------------------------------------------------------------
+  - name: STATUS
+    offset: 0x010
+    access: RO
+    description: "Adapter Status"
+    fields:
+      - name: link16_connected
+        bits: 0
+        description: "Link-16 data flow active"
+      - name: asterix_connected
+        bits: 1
+        description: "ASTERIX data flow active"
+      - name: correlating
+        bits: 2
+        description: "Correlation engine active"
+      - name: overflow
+        bits: 3
+        description: "Track buffer overflow"
+      - name: state
+        bits: [7:4]
+        description: "FSM state"
+
+  - name: TRACK_COUNTS
+    offset: 0x014
+    access: RO
+    description: "Track Counters"
+    fields:
+      - name: link16_tracks
+        bits: [7:0]
+        description: "Active Link-16 tracks"
+      - name: asterix_tracks
+        bits: [15:8]
+        description: "Active ASTERIX tracks"
+      - name: local_tracks
+        bits: [23:16]
+        description: "Active local tracks"
+      - name: fused_tracks
+        bits: [31:24]
+        description: "Fused output tracks"
+
+  - name: CORRELATION_STATS
+    offset: 0x018
+    access: RO
+    description: "Correlation Statistics"
+    fields:
+      - name: correlated_count
+        bits: [15:0]
+        description: "Tracks correlated this cycle"
+      - name: uncorrelated_count
+        bits: [31:16]
+        description: "Uncorrelated tracks (cue candidates)"
+
+  - name: MESSAGE_COUNTS
+    offset: 0x01C
+    access: RO
+    description: "Message Counters"
+    fields:
+      - name: link16_messages
+        bits: [15:0]
+        description: "Link-16 messages received"
+      - name: asterix_messages
+        bits: [31:16]
+        description: "ASTERIX messages received"
+
+  #---------------------------------------------------------------------------
+  # Cueing Configuration
+  #---------------------------------------------------------------------------
+  - name: CUE_CONFIG
+    offset: 0x020
+    access: RW
+    reset: 0x00001388
+    description: "Cueing Configuration"
+    fields:
+      - name: search_radius
+        bits: [15:0]
+        description: "Search radius in meters (default 5000)"
+      - name: priority_threshold
+        bits: [23:16]
+        description: "Priority threshold for cueing"
+      - name: cue_timeout
+        bits: [31:24]
+        description: "Cue validity timeout in seconds"
+
+  - name: CUE_STATUS
+    offset: 0x024
+    access: RO
+    description: "Cueing Status"
+    fields:
+      - name: active_cues
+        bits: [7:0]
+        description: "Number of active cues"
+      - name: pending_cues
+        bits: [15:8]
+        description: "Pending cue requests"
+      - name: completed_cues
+        bits: [23:16]
+        description: "Successfully completed cues"
+
+  #---------------------------------------------------------------------------
+  # Quality Weights
+  #---------------------------------------------------------------------------
+  - name: QUALITY_WEIGHTS
+    offset: 0x030
+    access: RW
+    reset: 0x40804080
+    description: "Fusion Quality Weights"
+    fields:
+      - name: link16_weight
+        bits: [7:0]
+        description: "Link-16 quality weight (default 0x80)"
+      - name: asterix_weight
+        bits: [15:8]
+        description: "ASTERIX quality weight (default 0x40)"
+      - name: local_weight
+        bits: [23:16]
+        description: "Local track quality weight (default 0x80)"
+      - name: age_decay
+        bits: [31:24]
+        description: "Track age decay factor (default 0x40)"
+
+  #---------------------------------------------------------------------------
+  # Debug Registers
+  #---------------------------------------------------------------------------
+  - name: DEBUG_LINK16
+    offset: 0x040
+    access: RO
+    description: "Link-16 Debug"
+    fields:
+      - name: last_msg_type
+        bits: [7:0]
+        description: "Last message type received"
+      - name: parse_errors
+        bits: [23:8]
+        description: "Parse error count"
+      - name: state
+        bits: [31:24]
+        description: "Parser state"
+
+  - name: DEBUG_ASTERIX
+    offset: 0x044
+    access: RO
+    description: "ASTERIX Debug"
+    fields:
+      - name: last_category
+        bits: [7:0]
+        description: "Last category received"
+      - name: parse_errors
+        bits: [23:8]
+        description: "Parse error count"
+      - name: state
+        bits: [31:24]
+        description: "Parser state"
+
+  #---------------------------------------------------------------------------
+  # Version
+  #---------------------------------------------------------------------------
+  - name: VERSION
+    offset: 0xFFC
+    access: RO
+    reset: 0x00030400
+    description: "Module Version"
+    fields:
+      - name: patch
+        bits: [7:0]
+        description: "Patch version"
+      - name: minor
+        bits: [15:8]
+        description: "Minor version (4)"
+      - name: major
+        bits: [23:16]
+        description: "Major version (3)"
+      - name: id
+        bits: [31:24]
+        description: "Module ID (FUSE=0xF5)"
