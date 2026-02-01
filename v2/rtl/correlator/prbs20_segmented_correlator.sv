@@ -7,7 +7,7 @@
 // Author: Dr. Mladen Mešter
 // Copyright (c) 2026 - All Rights Reserved
 //
-// Architecture (Grok-X + RSA Joint Design):
+// Architecture (Dr. Mladen Mešter Design):
 //   Segmented parallel correlator divides 1M+ chips into 32 segments
 //   of 32,768 chips each. Each segment processed sequentially with
 //   partial results accumulated.
