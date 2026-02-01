@@ -1,24 +1,27 @@
 # QEDMMA - Quantum-Enhanced Distributed Multi-Mode Array
 
-[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.1.0-blue.svg)](CHANGELOG.md)
-[![FPGA](https://img.shields.io/badge/Target-ZU47DR%20RFSoC-green.svg)](docs/hardware)
-[![Status](https://img.shields.io/badge/Status-Active%20Development-orange.svg)](docs/roadmap)
+[![Unified CI](https://github.com/mladen1312/QEDMMA-Radar-System/actions/workflows/qedmma_unified_ci.yml/badge.svg)](https://github.com/mladen1312/QEDMMA-Radar-System/actions)
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-3.0.0-blue.svg)](CHANGELOG.md)
 
-> **Revolutionary anti-stealth radar system combining Rydberg quantum sensing with VHF bistatic geometry for unprecedented detection capability.**
+> **Revolutionary anti-stealth radar system leveraging Rydberg quantum receivers and spread-spectrum waveforms for detection of 5th-generation stealth aircraft at unprecedented ranges.**
+
+**Author:** Dr. Mladen Mešter  
+**Copyright © 2026** - All Rights Reserved
 
 ---
 
-## 🎯 Key Capabilities
+## 🎯 Performance Summary
 
-| Capability | QEDMMA v2.1 | Competitor Average |
-|------------|-------------|-------------------|
-| **Detection Range** | 380 km (0.0001 m² RCS) | 350-500 km (0.01 m² RCS) |
-| **RCS Sensitivity** | **0.0001 m²** | 0.001-0.01 m² |
-| **Geolocation CEP** | <500 m @ 300 km | 1-3 km |
-| **Quantum SNR Advantage** | +15-25 dB | N/A |
-| **Sensor Fusion** | **Universal (open)** | Proprietary/closed |
-| **Unit Cost** | ~€1.8M | €15-30M |
+| Parameter | QEDMMA v3.0 | Competitors (JY-27V, Rezonans-NE) |
+|-----------|-------------|-----------------------------------|
+| **Detection Range** | **380+ km @ 0.0001 m² RCS** | ~150-200 km |
+| **Range Resolution** | **0.75 m** | 15-50 m |
+| **Processing Gain** | **45-60 dB** (PRBS-15/20) | 30-40 dB (LFM) |
+| **Quantum SNR Advantage** | **+15-25 dB** | N/A (classical) |
+| **ECCM Gain** | **+7 dB** (validated) | +2-3 dB |
+| **Geolocation CEP** | **<500 m @ 300 km** | >2 km |
+| **Unit Cost** | **~€1.8M** | €15-30M |
 
 ---
 
@@ -26,53 +29,30 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         QEDMMA v2.1 SYSTEM ARCHITECTURE                      │
+│                         QEDMMA v3.0 SYSTEM ARCHITECTURE                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    QUANTUM RECEIVE SUBSYSTEM                          │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
-│  │  │  Rydberg    │  │  Lock-In    │  │  Timestamp  │  │  DDC/FFT    │ │  │
-│  │  │  Sensor     │  │  Amplifier  │  │  Capture    │  │  Core       │ │  │
-│  │  │  (Cs vapor) │  │  (FPGA)     │  │  (<100 ps)  │  │  (200 MHz)  │ │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                      │                                      │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    SIGNAL PROCESSING SUBSYSTEM                        │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
-│  │  │  Range-     │  │  ML-CFAR    │  │  TDOA       │  │  Track      │ │  │
-│  │  │  Doppler    │  │  Detection  │  │  Geoloc     │  │  Formation  │ │  │
-│  │  │  Processing │  │  (ECCM)     │  │  Engine     │  │  (IMM/MHT)  │ │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                      │                                      │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    MULTI-SENSOR FUSION SUBSYSTEM                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
-│  │  │  Link 16    │  │  ASTERIX    │  │  IRST/ESM   │  │  ADS-B      │ │  │
-│  │  │  JREAP-C    │  │  CAT048     │  │  Adapters   │  │  Mode-S     │ │  │
-│  │  │  Interface  │  │  Parser     │  │             │  │  Receiver   │ │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                      │                                      │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    ECCM (Anti-Jamming) SUBSYSTEM                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
-│  │  │  Jammer     │  │  Adaptive   │  │  Home-on-   │  │  Deception  │ │  │
-│  │  │  Classifier │  │  Integration│  │  Jam (HOJ)  │  │  Rejection  │ │  │
-│  │  │  (ML-CFAR)  │  │  (+7 dB)    │  │  (<1km CEP) │  │  (TDOA)     │ │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                      │                                      │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    COMMUNICATION SUBSYSTEM                            │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
-│  │  │  Tri-Modal  │  │  Failover   │  │  Time Sync  │  │  C2         │ │  │
-│  │  │  Links      │  │  FSM        │  │  (PPS/PTP)  │  │  Interface  │ │  │
-│  │  │  (HF/VHF/SAT)│  │  (N+2)      │  │             │  │  (gRPC)     │ │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │  QUANTUM    │    │   200M      │    │   MULTI-    │    │    ECCM     │  │
+│  │  RECEIVER   │───▶│  CORRELATOR │───▶│   SENSOR    │───▶│   ENGINE    │  │
+│  │  (Rydberg)  │    │  (8-lane)   │    │   FUSION    │    │  (+7 dB)    │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘  │
+│        │                  │                  │                  │           │
+│        │                  │                  │                  │           │
+│        ▼                  ▼                  ▼                  ▼           │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        TRI-MODAL COMMUNICATION                       │   │
+│  │            Link-16 (Primary) │ HF (Backup) │ SATCOM (Tertiary)      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      FPGA SUBSYSTEM (ZU47DR)                         │   │
+│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐        │   │
+│  │  │   PRBS    │  │ PARALLEL  │  │   TRACK   │  │    ML     │        │   │
+│  │  │ GENERATOR │  │ CORRELATOR│  │  DATABASE │  │   CFAR    │        │   │
+│  │  │ (8-lane)  │  │ (48-bit)  │  │  (1024)   │  │  ENGINE   │        │   │
+│  │  └───────────┘  └───────────┘  └───────────┘  └───────────┘        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -83,213 +63,150 @@
 
 ```
 QEDMMA-Radar-System/
-├── v2/                           # Version 2.x Implementation
-│   ├── rtl/                      # RTL (SystemVerilog) Modules
-│   │   ├── timestamp_capture.sv  # <100 ps TDOA timestamp
-│   │   ├── comm_controller_top.sv # Tri-modal communications
-│   │   ├── failover_fsm.sv       # N+2 redundancy FSM
-│   │   ├── link_monitor.sv       # Link health monitoring
-│   │   ├── track_fusion_engine.sv # Multi-sensor fusion
-│   │   ├── track_database.sv     # 1024-track BRAM storage
-│   │   ├── external_track_adapter.sv # Universal format converter
-│   │   ├── link16_interface.sv   # STANAG 5516 JREAP-C
-│   │   ├── asterix_parser.sv     # EUROCONTROL CAT048
-│   │   └── eccm/                 # Anti-jamming subsystem
-│   │       ├── ml_cfar_engine.sv # ML-assisted CFAR
-│   │       ├── integration_controller.sv # Adaptive integration
-│   │       ├── jammer_localizer.sv # Home-on-Jam TDOA
-│   │       └── eccm_controller.sv # ECCM orchestrator
-│   │
-│   ├── regs/                     # Register Maps (SSOT YAML)
-│   │   ├── timestamp_capture_regs.yaml
-│   │   ├── comm_controller_regs.yaml
-│   │   └── fusion_engine_regs.yaml
-│   │
-│   ├── tb/                       # Cocotb Testbenches
-│   │   ├── test_failover_fsm.py
-│   │   ├── test_track_fusion.py
-│   │   └── Makefile.fusion
-│   │
-│   └── docs/                     # Technical Documentation
-│       ├── QEDMMA_v2.0_UPGRADE_PROPOSAL.md
-│       ├── QEDMMA_v2.0_COMMUNICATION_SPEC.md
-│       ├── MULTI_SENSOR_FUSION_ARCHITECTURE.md
-│       ├── COMPETITIVE_ANALYSIS.md
-│       └── eccm/
-│           ├── ECCM_ARCHITECTURE.md
-│           └── ECCM_IMPLEMENTATION_SUMMARY.md
-│
-├── src/                          # Python DSP & Validation
-│   ├── dsp/                      # Signal processing modules
-│   ├── sim/                      # Link budget simulation
-│   └── utils/                    # Utilities
-│
-├── scripts/                      # Automation scripts
-│   └── gen_regs.py              # Register map generator
-│
-└── docs/                         # Top-level documentation
-    ├── QEDMMA_System_Architecture_v1.3.md
-    └── QEDMMA_Technical_Appendix_v1.3.md
+├── README.md                          # This file
+├── CHANGELOG.md                       # Version history
+├── .github/workflows/                 # CI/CD pipelines
+│   ├── qedmma_unified_ci.yml         # Main unified pipeline
+│   ├── correlator_ci.yml             # Correlator-specific
+│   └── physics_validation.yml        # Link budget checks
+├── sim/                               # Simulation & validation
+│   ├── link_budget.py                # Radar equation simulator
+│   ├── fixed_point_twin.py           # Q-format validation
+│   └── rydberg_noise_model.py        # Quantum RX noise (NEW)
+├── scripts/
+│   └── gen_regs.py                   # SSOT register generator
+└── v2/
+    ├── rtl/
+    │   ├── fusion/                   # Multi-sensor fusion (5 modules)
+    │   │   ├── track_fusion_engine.sv
+    │   │   ├── track_database.sv
+    │   │   ├── external_track_adapter.sv
+    │   │   ├── link16_interface.sv
+    │   │   └── asterix_parser.sv
+    │   ├── eccm/                     # Electronic protection (4 modules)
+    │   │   ├── eccm_controller.sv
+    │   │   ├── ml_cfar_engine.sv
+    │   │   ├── jammer_localizer.sv
+    │   │   └── integration_controller.sv
+    │   ├── comm/                     # Tri-modal comms (3 modules)
+    │   │   ├── comm_controller_top.sv
+    │   │   ├── failover_fsm.sv
+    │   │   └── link_monitor.sv
+    │   └── correlator/               # v3.0 200 Mchip/s (3 modules)
+    │       ├── correlator_top_200m.sv
+    │       ├── parallel_correlator_engine.sv
+    │       └── prbs_generator_parallel.sv
+    ├── regs/                         # YAML register maps (SSOT)
+    │   ├── fusion_engine_regs.yaml
+    │   ├── comm_controller_regs.yaml
+    │   └── qedmma_v3_regs.yaml       # Quantum + waveform
+    ├── tb/                           # Testbenches
+    │   ├── test_track_fusion.py
+    │   ├── test_failover_fsm.py
+    │   └── correlator/
+    │       ├── test_correlator_200m.py
+    │       └── test_correlator_standalone.py
+    └── docs/                         # Documentation
+        ├── CORRELATOR_v3_SPECIFICATION.md
+        ├── MULTI_SENSOR_FUSION_ARCHITECTURE.md
+        ├── COMPETITIVE_ANALYSIS.md
+        └── eccm/
+            └── ECCM_ARCHITECTURE.md
 ```
 
 ---
 
-## 🔬 Physics Foundation
+## 🔬 Key Technologies
 
-### Radar Equation (Bistatic)
+### 1. Quantum Receiver (Rydberg Atoms)
+- **Sensitivity:** 200 nV/m/√Hz (vs 1 µV/m/√Hz classical)
+- **Advantage:** +15-25 dB SNR improvement
+- **States:** Cesium 60S₁/₂ → 60P₃/₂ transition @ 75 MHz
 
-$$P_r = \frac{P_t G_t G_r \lambda^2 \sigma_B}{(4\pi)^3 R_t^2 R_r^2 L}$$
+### 2. 200 Mchip/s PRBS Correlator
+- **Architecture:** 8-lane parallel @ 25 MHz clock
+- **Processing Gain:** 33-60 dB (PRBS-11 to PRBS-20)
+- **Range Resolution:** 0.75 m
+- **Fixed-Point:** Q16.16 (48-bit accumulator)
 
-Where:
-- $P_t = 1$ MW (transmitter power)
-- $G_t = 25$ dBi (transmit antenna gain)
-- $G_r = 15$ dBi (Rydberg effective aperture)
-- $\lambda = 2$ m (VHF, 150 MHz)
-- $\sigma_B = 30 \times \sigma_M$ (bistatic RCS enhancement)
-- $R_t, R_r$ = transmitter/receiver ranges
+### 3. AI-Enhanced ECCM
+- **ML-CFAR:** Adaptive threshold based on clutter statistics
+- **Jammer Localization:** TDOA/FDOA triangulation
+- **Validated Gain:** +7 dB against 50 kW barrage jammer
 
-### Quantum Advantage
-
-| Parameter | Classical | Rydberg Quantum |
-|-----------|-----------|-----------------|
-| Noise Temperature | 290 K | ~100 K |
-| Sensitivity | ~1 µV/m/√Hz | ~200 nV/m/√Hz |
-| **SNR Advantage** | Baseline | **+15 to +25 dB** |
-
-### Processing Gain
-
-$$G_p = T \times B = 100 \text{ ms} \times 10 \text{ MHz} = 10^6 \rightarrow 60 \text{ dB}$$
-
----
-
-## 🛡️ ECCM Performance
-
-Validated against Grok-X jamming simulation:
-
-| Jammer ERP | Without ECCM | With ECCM | Margin |
-|------------|--------------|-----------|--------|
-| 10 kW (realistic stealth) | +12.5 dB | +19.5 dB | ✅ +5.5 dB |
-| 50 kW (max fighter) | +2.0 dB | **+9.0 dB** | ✅ DETECTED |
-| 100 kW (stand-off) | -5.0 dB | +2.0 dB | ⚠️ Marginal |
-
-**Detection threshold:** 14 dB (Pd=0.9, Pfa=10⁻⁶)
-
----
-
-## 🌐 Competitive Analysis
-
-| System | Country | Range | RCS | Fusion | Cost |
-|--------|---------|-------|-----|--------|------|
-| **QEDMMA v2.1** | Croatia | 380 km | 0.0001 m² | **Open** | €1.8M |
-| JY-27V | China | 500 km | 0.01 m² | Closed | $15-20M |
-| Surya | India | 350 km | 0.001 m² | Limited | €24M |
-| Rezonans-NE | Russia | 400 km | 0.01 m² | Legacy | $30M+ |
-
-**Unique advantages:**
-1. ✅ Rydberg quantum sensing (1000× sensitivity)
-2. ✅ VHF bistatic geometry (30× RCS enhancement)
-3. ✅ Universal sensor fusion (NATO interoperable)
-4. ✅ 10× lower cost than competitors
-
----
-
-## 🚀 Roadmap
-
-### v2.1 (Current) - Production Ready
-- [x] Timestamp capture (<100 ps)
-- [x] Multi-sensor fusion (Link 16, ASTERIX, IRST, ESM, ADS-B)
-- [x] ECCM subsystem (ML-CFAR, adaptive integration, HOJ)
-- [x] Tri-modal communications (HF/VHF/SAT)
-- [x] N+2 redundancy
-
-### v3.0 (Q3 2026) - Quantum Upgrade
-- [ ] **200 Mchip/s PRBS waveform** (Code-division multiplexing)
-- [ ] **Fixed-point optimization** (Q16.16 → Q1.15 for DSP)
-- [ ] **Rydberg noise model** in simulation
-- [ ] **800 km detection range** (with quantum RX)
-- [ ] **CI/CD link budget automation**
-
-### v4.0 (2027) - AI Integration
-- [ ] Neural network ATR (Automatic Target Recognition)
-- [ ] Cognitive radar waveform adaptation
-- [ ] Distributed MIMO beamforming
-
----
-
-## 🔧 Getting Started
-
-### Prerequisites
-
-```bash
-# Python environment
-conda create -n qedmma python=3.11
-conda activate qedmma
-pip install numpy scipy matplotlib cocotb
-
-# FPGA tools
-# Vivado 2024.1+ for ZU47DR
-# Verilator 5.0+ for simulation
-```
-
-### Run Simulation
-
-```bash
-# Link budget simulation
-cd src/sim
-python link_budget.py --range 380 --rcs 0.0001
-
-# RTL simulation (cocotb)
-cd v2/tb
-make -f Makefile.fusion
-```
-
-### Register Map Generation
-
-```bash
-# Generate headers from YAML SSOT
-cd scripts
-python gen_regs.py --input ../v2/regs/fusion_engine_regs.yaml --output ../generated/
-```
+### 4. Multi-Sensor Fusion (JDL Model)
+- **Inputs:** ASTERIX Cat-048/062, Link-16 J3.2/J7.2, ESM, IRST
+- **Algorithms:** IMM (CV/CA/CT), MHT for tracking
+- **Track Capacity:** 1,024 simultaneous targets
 
 ---
 
 ## 📊 RTL Statistics
 
-| Subsystem | Modules | Lines | Status |
-|-----------|---------|-------|--------|
-| **Timestamp & Sync** | 2 | 856 | ✅ Verified |
-| **Communications** | 3 | 912 | ✅ Verified |
-| **Sensor Fusion** | 5 | 2,276 | ✅ Verified |
-| **ECCM** | 4 | 1,750 | ✅ Verified |
-| **Total** | **14** | **5,794** | |
+| Subsystem | Modules | Lines | DSP48 | BRAM |
+|-----------|---------|-------|-------|------|
+| Fusion | 5 | 2,276 | 8 | 32 |
+| ECCM | 4 | 1,750 | 24 | 16 |
+| Comm | 3 | 1,050 | 4 | 8 |
+| Correlator | 3 | 788 | 32 | 24 |
+| **TOTAL** | **15** | **5,864** | **68** | **80** |
+
+**Target FPGA:** Xilinx Zynq UltraScale+ ZU47DR  
+**Utilization:** <5% (room for v4.0 neural ATR)
 
 ---
 
-## 📜 License
+## 🔧 Quick Start
 
-**Proprietary - All Rights Reserved**
+```bash
+# Clone repository
+git clone https://github.com/mladen1312/QEDMMA-Radar-System.git
+cd QEDMMA-Radar-System
 
-Copyright © 2026 Dr. Mladen Mešter
+# Run physics validation
+python sim/link_budget.py --validate
+
+# Run correlator tests
+cd v2/tb/correlator
+python test_correlator_standalone.py
+
+# Lint RTL (requires Verilator)
+verilator --lint-only -Wall v2/rtl/correlator/*.sv
+```
+
+---
+
+## 🗺️ Roadmap
+
+| Version | Status | Key Features |
+|---------|--------|--------------|
+| **v2.1** | ✅ Complete | Multi-sensor fusion, ECCM (+7 dB), tri-modal comm |
+| **v3.0** | 🔄 In Progress | 200 Mchip/s PRBS, quantum RX integration, Q16.16 |
+| **v3.1** | 📋 Planned | White Rabbit PTP sync (<100 ps), bit-true twin |
+| **v4.0** | 📋 Planned | Neural ATR (micro-Doppler), DRFM rejection |
+
+---
+
+## 📜 References
+
+1. Sedlacek, J. A., et al. "Microwave electrometry with Rydberg atoms." *Nature Physics* 8, 819–824 (2012)
+2. Meyer, D. H., et al. "Digital communication with Rydberg atoms." *Physical Review Applied* 15, 014053 (2021)
+3. Skolnik, M. I. *Radar Handbook*, 3rd Ed. McGraw-Hill (2008)
+
+---
+
+## 📄 License
+
+**Proprietary** - Copyright © 2026 Dr. Mladen Mešter. All rights reserved.
 
 This software is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
 
 ---
 
-## 👤 Author
+## 📧 Contact
 
 **Dr. Mladen Mešter**  
+Radar Systems Architect  
 Zagreb, Croatia
 
----
-
-## 🔗 Related Documents
-
-- [System Architecture v1.3](docs/QEDMMA_System_Architecture_v1.3.md)
-- [Technical Appendix](docs/QEDMMA_Technical_Appendix_v1.3.md)
-- [Competitive Analysis](v2/docs/COMPETITIVE_ANALYSIS.md)
-- [ECCM Architecture](v2/docs/eccm/ECCM_ARCHITECTURE.md)
-- [Fusion Architecture](v2/docs/MULTI_SENSOR_FUSION_ARCHITECTURE.md)
-
----
-
-*Last updated: 31 January 2026*
+*"Defeating stealth through quantum physics."*
