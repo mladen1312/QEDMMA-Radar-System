@@ -7,7 +7,7 @@
 // Author: Dr. Mladen Mešter
 // Copyright (c) 2026 - All Rights Reserved
 //
-// Grok-X Validated Architecture:
+//  Architecture:
 //   LFSR-based generation uses only flip-flops and XOR gates.
 //   PRBS-20: 20 FF + 4 LUT = 0 BRAM
 //   PRBS-15: 15 FF + 4 LUT = 0 BRAM
