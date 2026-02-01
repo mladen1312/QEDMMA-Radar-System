@@ -1,0 +1,140 @@
+# QEDMMA v3.2 - 512-Lane Correlator Bank Register Map
+# Grok-X Physics Validated | Zero-DSP Architecture
+# Author: Dr. Mladen Mešter
+# Copyright (c) 2026
+
+module:
+  name: qedmma_correlator_bank_v32
+  description: "512-Lane Zero-DSP Parallel Correlator with PISO Serialization"
+  base_address: 0x000F0000
+  version: "3.2.0"
+
+registers:
+  - name: CTRL
+    offset: 0x00
+    access: RW
+    reset: 0x00000001
+    description: "Bank Control Register"
+    fields:
+      - { name: enable,           bits: "0",      default: 1,  desc: "Enable correlator bank" }
+      - { name: clear,            bits: "1",      default: 0,  desc: "Clear accumulators and counters" }
+      - { name: dump_on_pps,      bits: "2",      default: 1,  desc: "Dump on WR PPS edge" }
+      - { name: wr_sync_enable,   bits: "3",      default: 1,  desc: "Enable White Rabbit sync" }
+      - { name: start,            bits: "4",      default: 0,  desc: "Manual start trigger" }
+
+  - name: STATUS
+    offset: 0x04
+    access: RO
+    description: "Bank Status Register"
+    fields:
+      - { name: integration_done, bits: "0",      desc: "Integration complete flag" }
+      - { name: overflow,         bits: "1",      desc: "Accumulator overflow detected" }
+      - { name: piso_busy,        bits: "2",      desc: "PISO serialization in progress" }
+      - { name: piso_state,       bits: "5:3",    desc: "PISO FSM state" }
+      - { name: bank_ready,       bits: "6",      desc: "Bank ready for new integration" }
+
+  - name: INTEGRATION_COUNT
+    offset: 0x08
+    access: RW
+    reset: 0x000FFFFF
+    description: "Number of chips to integrate"
+    fields:
+      - { name: count,            bits: "31:0",   default: 1048575, desc: "Chip count (PRBS-20 default)" }
+
+  - name: CHIP_COUNT
+    offset: 0x0C
+    access: RO
+    description: "Current chip counter"
+    fields:
+      - { name: count,            bits: "31:0",   desc: "Chips processed in current integration" }
+
+  - name: PEAK_LANE
+    offset: 0x10
+    access: RO
+    description: "Lane index with peak correlation"
+    fields:
+      - { name: lane,             bits: "9:0",    desc: "Peak lane index (0-511)" }
+
+  - name: PEAK_MAG_LO
+    offset: 0x14
+    access: RO
+    description: "Peak magnitude (lower 32 bits)"
+    fields:
+      - { name: value,            bits: "31:0",   desc: "Magnitude[31:0]" }
+
+  - name: PEAK_MAG_HI
+    offset: 0x18
+    access: RO
+    description: "Peak magnitude (upper 16 bits)"
+    fields:
+      - { name: value,            bits: "15:0",   desc: "Magnitude[47:32]" }
+
+  - name: BANK_ENABLE
+    offset: 0x1C
+    access: RW
+    reset: 0x000000FF
+    description: "Multi-bank enable mask (for top-level)"
+    fields:
+      - { name: mask,             bits: "7:0",    default: 0xFF, desc: "Bank enable bitmask" }
+
+  - name: RANGE_GATE_OFFSET
+    offset: 0x20
+    access: RW
+    reset: 0x00000000
+    description: "Range gate offset for extended range steering"
+    fields:
+      - { name: offset,           bits: "31:0",   default: 0, desc: "Range gate offset (samples)" }
+
+  - name: GLOBAL_PEAK_LANE
+    offset: 0x24
+    access: RO
+    description: "Global peak lane across all banks"
+    fields:
+      - { name: lane,             bits: "12:0",   desc: "Global lane index (0-4095 for 8 banks)" }
+      - { name: bank,             bits: "15:13",  desc: "Bank index containing peak" }
+
+  - name: VERSION
+    offset: 0x3C
+    access: RO
+    reset: 0x00030200
+    description: "IP Core Version"
+    fields:
+      - { name: patch,            bits: "7:0",    desc: "Patch version" }
+      - { name: minor,            bits: "15:8",   desc: "Minor version" }
+      - { name: major,            bits: "23:16",  desc: "Major version" }
+
+# Performance Specifications (Grok-X Validated)
+specs:
+  architecture:
+    num_lanes: 512
+    lanes_per_bank: 512
+    max_banks: 8
+    total_lanes: 4096
+    
+  zero_dsp:
+    dsp48_used: 0
+    correlation_method: "XOR-based (±1 BPSK)"
+    latency_cycles: 1
+    
+  range_coverage:
+    per_lane_m: 0.75
+    per_bank_m: 384
+    per_8_banks_km: 3.07
+    
+  resources_per_bank:
+    lut: 5000
+    ff: 10000
+    bram: 0
+    dsp: 0
+    
+  serialization:
+    piso_width: 64
+    words_per_dump: 1024  # 512 lanes × 2 (I+Q)
+    axi_clock_mhz: 100
+    dump_time_us: 10.24
+    
+  timing:
+    integration_prbs15: 163.8  # µs @ 200 MHz
+    integration_prbs20: 5243   # µs @ 200 MHz
+    update_rate_prbs15_hz: 6104
+    update_rate_prbs20_hz: 191
