@@ -265,3 +265,169 @@ PHASE 3: Full QEDMMA Node (12+ months)
 
 **Document Version:** 1.0  
 **Last Updated:** February 2026
+
+---
+
+## 🦑 KrakenSDR Analysis (Added)
+
+### Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      KrakenSDR                              │
+├─────────────────────────────────────────────────────────────┤
+│  Type:        5-channel COHERENT RTL-SDR                    │
+│  Frequency:   24 MHz - 1766 MHz                             │
+│  Bandwidth:   2.4 MHz per channel                           │
+│  ADC:         8-bit (RTL2832U)                              │
+│  Channels:    5× RX (phase coherent!)                       │
+│  TX:          ❌ NONE - RECEIVE ONLY!                       │
+│  Price:       $399-500 (~€370-460)                          │
+│  Processor:   Requires Raspberry Pi 4/5                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### ⚠️ CRITICAL LIMITATION
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ⛔ KrakenSDR CANNOT TRANSMIT!                                ║
+║                                                               ║
+║  Za aktivni QEDMMA radar trebamo TX za PRBS waveform.        ║
+║  KrakenSDR je SAMO prijemnik (5× RX, 0× TX).                 ║
+║                                                               ║
+║  → Ne može samostalno raditi kao aktivni radar!              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### KrakenSDR Specifications
+
+| Parameter | Value | vs PlutoSDR |
+|-----------|-------|-------------|
+| RX Channels | 5 (coherent) | 2 |
+| TX Channels | **0 (none!)** | 2 |
+| Frequency | 24-1766 MHz | 70-6000 MHz |
+| ADC Resolution | 8-bit | 12-bit |
+| Bandwidth/ch | 2.4 MHz | 56 MHz |
+| Phase Coherence | ✅ Built-in | ❌ Single unit |
+| Price | ~€400 | €230 |
+
+### Use Cases
+
+**KrakenSDR je dizajniran za:**
+- ✅ Radio Direction Finding (RDF)
+- ✅ Passive Radar (FM/DVB-T illuminator)
+- ✅ Beamforming
+- ✅ Multi-channel monitoring
+- ❌ Active radar TX
+
+**QEDMMA PoC zahtijeva:**
+- ✅ VHF RX (155 MHz) - KrakenSDR može
+- ❌ VHF TX (PRBS waveform) - KrakenSDR NE MOŽE
+
+### Hybrid Architecture Option
+
+Za napredni sustav, moguća je kombinacija:
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│            HYBRID: PlutoSDR TX + KrakenSDR RX                │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────┐                   ┌──────────────┐         │
+│  │  PlutoSDR    │                   │  KrakenSDR   │         │
+│  │  (TX only)   │                   │  (5× RX)     │         │
+│  │  PRBS Gen    │                   │  Coherent    │         │
+│  └──────┬───────┘                   └──────┬───────┘         │
+│         │                                  │                  │
+│         ▼                                  ▼                  │
+│    ┌─────────┐                    ┌─────────────────┐        │
+│    │ PA 30W  │                    │ 5× Yagi Array   │        │
+│    └────┬────┘                    │ (beamforming)   │        │
+│         │                         └────────┬────────┘        │
+│         ▼                                  │                  │
+│    ┌─────────┐                             │                  │
+│    │ Tx Yagi │═══════════════════════════▶│                  │
+│    └─────────┘         (target)            │                  │
+│                                            │                  │
+│  Benefits:                                 │                  │
+│  • 5-channel beamforming                   │                  │
+│  • Digital beam steering                   │                  │
+│  • Angle of Arrival (AOA)                  │                  │
+│  • Jammer nulling                          │                  │
+│                                                               │
+│  Cost: €230 (Pluto) + €400 (Kraken) = €630                   │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Passive Radar Mode (Alternative)
+
+KrakenSDR može raditi **pasivni radar** bez TX:
+
+```
+Illuminator: FM radio tower (100 kW+)
+Receiver:    KrakenSDR with 2× Yagi
+             - 1× Reference (toward FM tower)
+             - 1× Surveillance (toward sky)
+
+Range:       ~50-100 km for aircraft
+Cost:        €400 (just KrakenSDR + antennas)
+Limitation:  Depends on existing transmitters
+```
+
+### Comparison for QEDMMA PoC
+
+| Capability | PlutoSDR | KrakenSDR | Pluto+Kraken |
+|------------|:--------:|:---------:|:------------:|
+| Active Radar TX | ✅ | ❌ | ✅ |
+| VHF RX | ✅ | ✅ | ✅ |
+| Coherent Multi-RX | ❌ | ✅ 5ch | ✅ 5ch |
+| Beamforming | ❌ | ✅ | ✅ |
+| AOA/DOA | ❌ | ✅ | ✅ |
+| Passive Radar | ⚠️ | ✅ | ✅ |
+| Price | €230 | €400 | €630 |
+| Complexity | Low | Medium | High |
+
+### Verdict for KrakenSDR
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ZA QEDMMA PoC "Garažni Pobunjenik":                       │
+│                                                             │
+│  ❌ KrakenSDR SAMO = NE MOŽE (nema TX)                     │
+│                                                             │
+│  ✅ KrakenSDR + PlutoSDR = MOŽE, ali kompleksnije          │
+│     • Pluto za TX (PRBS)                                   │
+│     • Kraken za 5-ch coherent RX                           │
+│     • Omogućuje beamforming i AOA                          │
+│     • €630 ukupno                                          │
+│                                                             │
+│  ✅ KrakenSDR za PASIVNI radar = ODLIČNO                   │
+│     • Koristi FM/DVB-T kao illuminator                     │
+│     • Jeftino (samo RX)                                    │
+│     • Ali ovisi o postojećim odašiljačima                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Future Upgrade Path with KrakenSDR
+
+```
+PHASE 1: Basic PoC
+├── PlutoSDR only (€230)
+├── Single TX, single RX
+└── Proves physics
+
+PHASE 2: Beamforming Upgrade  
+├── Add KrakenSDR (+€400)
+├── 5-channel coherent RX array
+├── Digital beamforming
+├── AOA for target localization
+└── Jammer nulling capability
+
+PHASE 3: Distributed Network
+├── Multiple KrakenSDR nodes
+├── TDOA localization
+├── Cloud-based fusion
+└── Full multistatic radar
+```
